@@ -42,7 +42,8 @@ class SignOutManager {
     async updateCounts() {
         try {
             const allSignOuts = await this.loadAllSignOuts();
-            const today = new Date().toDateString();
+            // Get today's date in EST timezone for proper comparison
+            const today = Utils.getTodayInDisplayTimezone();
             
             const currentlyOutCount = this.app.domManager.get('currentlyOutCount');
             const totalTodayCount = this.app.domManager.get('totalTodayCount');
@@ -52,9 +53,11 @@ class SignOutManager {
                 currentlyOutCount.textContent = this.signouts.length;
             }
             if (totalTodayCount) {
-                totalTodayCount.textContent = allSignOuts.filter(s => 
-                    new Date(s.sign_out_time).toDateString() === today
-                ).length;
+                totalTodayCount.textContent = allSignOuts.filter(s => {
+                    // Convert UTC stored time to display timezone date for comparison
+                    const signOutDate = Utils.formatDateForComparison(s.sign_out_time);
+                    return signOutDate === today;
+                }).length;
             }
             if (totalRecordsCount) {
                 totalRecordsCount.textContent = allSignOuts.length;

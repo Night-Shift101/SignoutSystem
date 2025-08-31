@@ -45,8 +45,9 @@ class PermissionsMiddleware {
                     SELECT COUNT(*) as count
                     FROM permissions p
                     JOIN user_permissions up ON p.id = up.permission_id
-                    WHERE up.user_id = ? AND p.name = ?
+                    WHERE up.user_id = ? AND (p.name = ? OR p.name = 'system_admin')
                 `);
+               
                 stmt.get(userId, permission, (err, result) => {
                     if (err) {
                         console.error('Error checking permission:', err);

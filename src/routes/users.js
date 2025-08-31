@@ -136,6 +136,33 @@ router.post('/',
                     return res.status(500).json(errorResponse);
                 }
                 
+                // Log audit event for user creation
+                const auditContext = {
+                    userId: req.session.user.id,
+                    userName: `${req.session.user.rank} ${req.session.user.full_name}`,
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent'),
+                    sessionId: req.sessionID
+                };
+                
+                req.auditManager.logUserChange(
+                    'CREATE',
+                    { id: result.id },
+                    null,
+                    { 
+                        username: userData.username,
+                        rank: userData.rank,
+                        full_name: userData.lastName, // lastName becomes full_name
+                        is_active: 1
+                    },
+                    auditContext,
+                    (auditErr) => {
+                        if (auditErr) {
+                            console.error('Failed to log user creation audit:', auditErr);
+                        }
+                    }
+                );
+                
                 const successResponse = req.errorHandler.success({ 
                     userId: result.id,
                     username: userData.username
@@ -214,6 +241,28 @@ router.patch('/:id/pin',
                             return res.status(500).json(errorResponse);
                         }
                         
+                        // Log audit event for PIN change
+                        const auditContext = {
+                            userId: req.session.user.id,
+                            userName: `${req.session.user.rank} ${req.session.user.full_name}`,
+                            ipAddress: req.ip,
+                            userAgent: req.get('User-Agent'),
+                            sessionId: req.sessionID
+                        };
+                        
+                        req.auditManager.logUserChange(
+                            'UPDATE',
+                            user,
+                            { pin_hash: '[HIDDEN]' }, // Don't store actual PIN hashes
+                            { pin_hash: '[CHANGED]' },
+                            auditContext,
+                            (auditErr) => {
+                                if (auditErr) {
+                                    console.error('Failed to log PIN change audit:', auditErr);
+                                }
+                            }
+                        );
+                        
                         const successResponse = req.errorHandler.success(null, 'PIN updated successfully');
                         res.json(successResponse);
                     });
@@ -280,6 +329,33 @@ router.delete('/:id',
                         return res.status(500).json(errorResponse);
                     }
                     
+                    // Log audit event for user deletion
+                    const auditContext = {
+                        userId: req.session.user.id,
+                        userName: `${req.session.user.rank} ${req.session.user.full_name}`,
+                        ipAddress: req.ip,
+                        userAgent: req.get('User-Agent'),
+                        sessionId: req.sessionID
+                    };
+                    
+                    req.auditManager.logUserChange(
+                        'DELETE',
+                        user,
+                        {
+                            username: user.username,
+                            rank: user.rank,
+                            full_name: user.full_name,
+                            is_active: user.is_active
+                        },
+                        null,
+                        auditContext,
+                        (auditErr) => {
+                            if (auditErr) {
+                                console.error('Failed to log user deletion audit:', auditErr);
+                            }
+                        }
+                    );
+                    
                     const successResponse = req.errorHandler.success(null, 'User deleted successfully');
                     res.json(successResponse);
                 });
@@ -335,6 +411,28 @@ router.patch('/:id/activate',
                         const errorResponse = req.errorHandler.databaseError(err, 'Activate user');
                         return res.status(500).json(errorResponse);
                     }
+                    
+                    // Log audit event for user activation
+                    const auditContext = {
+                        userId: req.session.user.id,
+                        userName: `${req.session.user.rank} ${req.session.user.full_name}`,
+                        ipAddress: req.ip,
+                        userAgent: req.get('User-Agent'),
+                        sessionId: req.sessionID
+                    };
+                    
+                    req.auditManager.logUserChange(
+                        'UPDATE',
+                        user,
+                        { is_active: user.is_active },
+                        { is_active: true },
+                        auditContext,
+                        (auditErr) => {
+                            if (auditErr) {
+                                console.error('Failed to log user activation audit:', auditErr);
+                            }
+                        }
+                    );
                     
                     const successResponse = req.errorHandler.success(null, 'User activated successfully');
                     res.json(successResponse);
@@ -402,6 +500,28 @@ router.patch('/:id/deactivate',
                         const errorResponse = req.errorHandler.databaseError(err, 'Deactivate user');
                         return res.status(500).json(errorResponse);
                     }
+                    
+                    // Audit log the user deactivation
+                    const auditContext = {
+                        userId: req.session.user.id,
+                        userName: `${req.session.user.rank} ${req.session.user.full_name}`,
+                        ipAddress: req.ip || req.connection.remoteAddress,
+                        userAgent: req.get('User-Agent'),
+                        sessionId: req.session.id
+                    };
+                    
+                    req.auditManager.logUserChange(
+                        'DEACTIVATE',
+                        user,
+                        { is_active: true },
+                        { is_active: false },
+                        auditContext,
+                        (auditErr) => {
+                            if (auditErr) {
+                                console.error('Failed to log user deactivation audit:', auditErr);
+                            }
+                        }
+                    );
                     
                     const successResponse = req.errorHandler.success(null, 'User deactivated successfully');
                     res.json(successResponse);
@@ -479,6 +599,88 @@ router.patch('/admin/credentials',
         } catch (error) {
             console.error('Update admin credentials error:', error);
             const errorResponse = req.errorHandler.failure('Failed to update credentials', {
+                category: ErrorCategory.SYSTEM,
+                severity: ErrorSeverity.HIGH,
+                originalError: error
+            });
+            res.status(500).json(errorResponse);
+        }
+    }
+);
+
+// Change own credentials (PIN only for regular users)
+router.patch('/me/credentials',
+    requireAuth,
+    requirePermission('change_own_credentials'),
+    [
+        body('currentPin').isLength({ min: 4 }).withMessage('Current PIN must be at least 4 characters'),
+        body('newPin').isLength({ min: 4 }).withMessage('New PIN must be at least 4 characters'),
+        body('confirmPin').custom((value, { req }) => {
+            if (value !== req.body.newPin) {
+                throw new Error('PIN confirmation does not match');
+            }
+            return true;
+        })
+    ],
+    handleValidationErrors,
+    async (req, res) => {
+        try {
+            const userId = req.session.user.id;
+            const { currentPin, newPin } = req.body;
+
+            // Use the existing changeUserPin method that validates current PIN
+            req.db.changeUserPin(userId, currentPin, newPin, (err, result) => {
+                if (err) {
+                    console.error('Error changing own PIN:', err);
+                    
+                    if (err.message === 'Current PIN is incorrect') {
+                        const errorResponse = req.errorHandler.failure('Current PIN is incorrect', {
+                            category: ErrorCategory.AUTHENTICATION,
+                            severity: ErrorSeverity.MEDIUM
+                        });
+                        return res.status(401).json(errorResponse);
+                    }
+                    
+                    if (err.message === 'User not found') {
+                        const errorResponse = req.errorHandler.failure('User not found', {
+                            category: ErrorCategory.AUTHENTICATION,
+                            severity: ErrorSeverity.HIGH
+                        });
+                        return res.status(404).json(errorResponse);
+                    }
+                    
+                    const errorResponse = req.errorHandler.databaseError(err, 'Change own PIN');
+                    return res.status(500).json(errorResponse);
+                }
+                
+                // Log this action in audit logs
+                const auditContext = {
+                    userId: req.session.user.id,
+                    userName: `${req.session.user.rank} ${req.session.user.full_name}`,
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent'),
+                    sessionId: req.sessionID
+                };
+                
+                req.auditManager.logUserChange(
+                    'UPDATE',
+                    { id: userId },
+                    null,
+                    { pin_changed: true },
+                    auditContext,
+                    (auditErr) => {
+                        if (auditErr) {
+                            console.error('Audit log error for credential change:', auditErr);
+                        }
+                    }
+                );
+                
+                const successResponse = req.errorHandler.success(null, 'PIN changed successfully');
+                res.json(successResponse);
+            });
+        } catch (error) {
+            console.error('Change own credentials error:', error);
+            const errorResponse = req.errorHandler.failure('Failed to change credentials', {
                 category: ErrorCategory.SYSTEM,
                 severity: ErrorSeverity.HIGH,
                 originalError: error

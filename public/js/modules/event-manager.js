@@ -117,11 +117,23 @@ class EventManager {
         
         // Manual entry modal events
         const noCacBtn = this.app.domManager.get('noCacBtn');
+        const devFillBtn = this.app.domManager.get('devFillBtn');
         const closeManualEntryModal = this.app.domManager.get('closeManualEntryModal');
         const cancelManualEntry = this.app.domManager.get('cancelManualEntry');
         const manualEntryForm = this.app.domManager.get('manualEntryForm');
         
         noCacBtn?.addEventListener('click', () => this.app.modalManager.openManualEntryModal());
+        
+        if (devFillBtn) {
+            console.log('Dev fill button found, attaching event listener');
+            devFillBtn.addEventListener('click', () => {
+                console.log('Dev fill button clicked');
+                this.app.barcodeManager.fillRandomSoldiers();
+            });
+        } else {
+            console.log('Dev fill button not found in DOM');
+        }
+        
         closeManualEntryModal?.addEventListener('click', () => this.app.modalManager.closeManualEntryModal());
         cancelManualEntry?.addEventListener('click', () => this.app.modalManager.closeManualEntryModal());
         manualEntryForm?.addEventListener('submit', (e) => this.app.modalManager.handleManualEntry(e));
@@ -247,6 +259,22 @@ class EventManager {
         managePermissionsForm?.addEventListener('submit', (e) => {
             e.preventDefault();
             this.app.userManager.handleManagePermissions();
+        });
+
+        // Change own credentials modal events
+        const changeOwnCredentialsBtn = this.app.domManager.get('changeOwnCredentialsBtn');
+        const closeChangeOwnCredentialsModal = this.app.domManager.get('closeChangeOwnCredentialsModal');
+        const cancelChangeOwnCredentials = this.app.domManager.get('cancelChangeOwnCredentials');
+        const submitChangeOwnCredentials = this.app.domManager.get('submitChangeOwnCredentials');
+        const changeOwnCredentialsForm = this.app.domManager.get('changeOwnCredentialsForm');
+        
+        changeOwnCredentialsBtn?.addEventListener('click', () => this.app.modalManager.openChangeOwnCredentialsModal());
+        closeChangeOwnCredentialsModal?.addEventListener('click', () => this.app.modalManager.closeChangeOwnCredentialsModal());
+        cancelChangeOwnCredentials?.addEventListener('click', () => this.app.modalManager.closeChangeOwnCredentialsModal());
+        submitChangeOwnCredentials?.addEventListener('click', () => this.app.userManager.handleChangeOwnCredentials());
+        changeOwnCredentialsForm?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.app.userManager.handleChangeOwnCredentials();
         });
     }
 

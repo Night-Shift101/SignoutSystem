@@ -8,19 +8,20 @@ class BarcodeManager {
 
     initializeElements() {
         this.barcodeInput = document.getElementById('barcodeInput');
-        this.parseBarcodeBtn = document.getElementById('parseBarcodeBtn');
-        this.clearBarcodeBtn = document.getElementById('clearBarcodeBtn');
         this.soldiersChips = document.getElementById('soldiersChips');
         this.clearAllSoldiersBtn = document.getElementById('clearAllSoldiersBtn');
+        this.soldierCount = document.getElementById('soldierCount');
     }
 
     attachEventListeners() {
-        this.parseBarcodeBtn.addEventListener('click', () => this.handleBarcodeParse());
-        this.clearBarcodeBtn.addEventListener('click', () => this.clearBarcodeData());
         this.clearAllSoldiersBtn.addEventListener('click', () => this.clearAllSoldiers());
+        this.barcodeTimeout = null;
+
         this.barcodeInput.addEventListener('input', () => {
-            
-            setTimeout(() => this.handleBarcodeParse(), 500);
+            clearTimeout(this.barcodeTimeout);
+            this.barcodeTimeout = setTimeout(() => {
+                this.handleBarcodeParse();
+            }, 500);
         });
         
         
@@ -73,7 +74,7 @@ class BarcodeManager {
                 
                 console.log('Added soldier:', parsedInfo);
             } else {
-                this.notificationManager.showNotification('Could not parse soldier information from barcode data. Please check the format.', 'error');
+                this.notificationManager.showNotification('Could not parse soldier information from barcode data. Please try again.', 'error');
             }
         } catch (error) {
             console.error('Error parsing barcode:', error);
@@ -87,6 +88,8 @@ class BarcodeManager {
     }
 
     renderSoldierChips() {
+        this.updateSoldierCount(); // Update the count whenever rendering
+        
         if (this.addedSoldiers.length === 0) {
             this.soldiersChips.innerHTML = '<div class="empty-state-chips">No soldiers added yet. Scan CAC barcodes to add soldiers.</div>';
             this.clearAllSoldiersBtn.style.display = 'none';
@@ -105,6 +108,12 @@ class BarcodeManager {
         
         this.clearAllSoldiersBtn.style.display = 'inline-block';
         this.autoAdjustContainerHeight();
+    }
+
+    updateSoldierCount() {
+        if (this.soldierCount) {
+            this.soldierCount.textContent = `(${this.addedSoldiers.length})`;
+        }
     }
 
     autoAdjustContainerHeight() {
@@ -153,6 +162,62 @@ class BarcodeManager {
     clearSoldiers() {
         this.addedSoldiers = [];
         this.renderSoldierChips();
+    }
+
+    /**
+     * Development method to fill with random soldiers
+     */
+    fillRandomSoldiers() {
+        console.log('fillRandomSoldiers method called');
+        
+        // Clear existing soldiers first
+        this.clearSoldiers();
+        
+        const ranks = ['PVT', 'PV2', 'PFC', 'SPC'];
+        const firstNames = [
+            'John', 'Jane', 'Michael', 'Sarah', 'David', 'Emily', 'James', 'Ashley', 'Robert', 'Jessica',
+            'William', 'Amanda', 'Christopher', 'Stephanie', 'Daniel', 'Melissa', 'Matthew', 'Nicole', 'Anthony', 'Jennifer',
+            'Joshua', 'Elizabeth', 'Andrew', 'Megan', 'Joseph', 'Lauren', 'Ryan', 'Brittany', 'Brandon', 'Kayla',
+            'Justin', 'Amber', 'Tyler', 'Rachel', 'Nicholas', 'Samantha', 'Alexander', 'Courtney', 'Jacob', 'Danielle',
+            'Zachary', 'Heather', 'Benjamin', 'Rebecca', 'Samuel', 'Michelle', 'Logan', 'Katherine', 'Nathan', 'Victoria'
+        ];
+        const lastNames = [
+            'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
+            'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
+            'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson',
+            'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
+            'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts'
+        ];
+        
+        console.log('Generating random soldiers...');
+        
+        // Generate random number of soldiers between 3 and 15
+        const randomCount = Math.floor(Math.random() * 13) + 3; // Random number between 3-15
+        console.log(`Generating ${randomCount} random soldiers...`);
+        
+        for (let i = 0; i < randomCount; i++) {
+            const rank = ranks[Math.floor(Math.random() * ranks.length)];
+            const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+            const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+            const dodId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+            
+            const soldier = {
+                rank: rank,
+                firstName: firstName,
+                lastName: lastName,
+                middleInitial: '',
+                dodId: dodId,
+                fullName: `${firstName} ${lastName}`,
+                isManualEntry: true // Mark as manual entry since it's dev data
+            };
+            
+            console.log(`Adding soldier ${i + 1}:`, soldier);
+            this.addedSoldiers.push(soldier);
+        }
+        
+        console.log('Total soldiers added:', this.addedSoldiers.length);
+        this.renderSoldierChips();
+        this.notificationManager.showNotification(`Added ${randomCount} random soldiers for development`, 'success');
     }
 }
 

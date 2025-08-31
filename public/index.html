@@ -201,6 +201,31 @@
                 </div>
 
                 <div class="settings-content">
+                    <!-- My Account Section -->
+                    <div class="settings-section" id="myAccountSection" style="display: none;">
+                        <h3>👤 My Account</h3>
+                        <div class="my-account-container">
+                            <div class="account-info">
+                                <div class="setting-item">
+                                    <label>Current User</label>
+                                    <div class="setting-value" id="myAccountUserDisplay">Loading...</div>
+                                </div>
+                                <div class="setting-item">
+                                    <label>Account Status</label>
+                                    <div class="setting-value">
+                                        <span class="status-badge status-active">Active</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="account-actions">
+                                <button type="button" class="btn btn-primary" id="changeOwnCredentialsBtn">
+                                    <span class="icon">🔑</span> Change My PIN
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="settings-section">
                         <h3>Account Management</h3>
                         <div class="accounts-list-container">
@@ -243,7 +268,125 @@
                         </div>
                     </div>
 
-                    
+                    <!-- Audit Logs Section -->
+                    <div class="settings-section" id="auditLogsSection" style="display: none;">
+                        <h3>📋 System Activity Logs</h3>
+                        <div class="audit-logs-container">
+                            <div class="audit-logs-header">
+                                
+                                
+                                <div class="audit-controls">
+                                    <div class="filter-controls">
+                                        <div class="filter-group">
+                                            <label for="auditActionFilter">Action Type:</label>
+                                            <select id="auditActionFilter" class="form-control">
+                                                <option value="">All Actions</option>
+                                                <option value="CREATE">Create</option>
+                                                <option value="UPDATE">Update</option>
+                                                <option value="DELETE">Delete</option>
+                                                <option value="ACTIVATE">Activate</option>
+                                                <option value="DEACTIVATE">Deactivate</option>
+                                                <option value="VIEW">View</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="filter-group">
+                                            <label for="auditTableFilter">Table:</label>
+                                            <select id="auditTableFilter" class="form-control">
+                                                <option value="">All Tables</option>
+                                                <option value="users">Users</option>
+                                                <option value="signouts">Sign-outs</option>
+                                                <option value="permissions">Permissions</option>
+                                                <option value="settings">Settings</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="filter-group">
+                                            <label for="auditUserFilter">User:</label>
+                                            <select id="auditUserFilter" class="form-control">
+                                                <option value="">All Users</option>
+                                                <!-- Populated dynamically -->
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="filter-group">
+                                            <label for="auditSearchInput">Search:</label>
+                                            <input type="text" id="auditSearchInput" class="form-control" 
+                                                   placeholder="Search descriptions...">
+                                        </div>
+                                        
+                                        <div class="filter-group">
+                                            <label for="auditPageSizeSelect">Show:</label>
+                                            <select id="auditPageSizeSelect" class="form-control">
+                                                <option value="5" selected>5 entries</option>
+                                                <option value="10">10 entries</option>
+                                                <option value="25">25 entries</option>
+                                                <option value="50">50 entries</option>
+                                                <option value="100">100 entries</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="action-controls">
+                                        <button type="button" class="btn btn-secondary" id="clearAuditFiltersBtn">
+                                            Clear Filters
+                                        </button>
+                                        <button type="button" class="btn btn-primary" id="refreshAuditLogsBtn">
+                                            <span class="icon">�</span> Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="audit-logs-content">
+                                <div class="audit-logs-table-container">
+                                    <table class="audit-logs-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Timestamp</th>
+                                                <th>User</th>
+                                                <th>Action</th>
+                                                <th>Target</th>
+                                                <th>Description</th>
+                                                <th>Details</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="auditLogsTableBody">
+                                            <!-- Populated dynamically -->
+                                        </tbody>
+                                    </table>
+                                    
+                                    <div id="auditLogsEmptyState" class="empty-state" style="display: none;">
+                                        <div class="empty-icon">📋</div>
+                                        <h3>No audit logs found</h3>
+                                        <p>No audit log entries match the current filters.</p>
+                                    </div>
+                                    
+                                    <div id="auditLogsLoadingState" class="loading-state" style="display: none;">
+                                        <div class="loading-spinner"></div>
+                                        <p>Loading audit logs...</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="audit-logs-pagination" id="auditLogsPagination" style="display: none;">
+                                    <div class="pagination-info">
+                                        <span id="auditPaginationInfo">Showing 0 of 0 entries</span>
+                                    </div>
+                                    <div class="pagination-controls">
+                                        <button type="button" class="btn btn-sm btn-secondary" id="auditPrevPageBtn" disabled>
+                                            ← Previous
+                                        </button>
+                                        <span class="pagination-status" id="auditPageStatus">Page 1 of 1</span>
+                                        <button type="button" class="btn btn-sm btn-secondary" id="auditNextPageBtn" disabled>
+                                            Next →
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -259,25 +402,18 @@
                 <div class="form-section">
                     <h3>Scan CAC Barcodes</h3>
                     <div class="form-group">
-                        <label for="barcodeInput">Scan CAC Barcode <button type="button" id="noCacBtn" class="no-cac-link">(No CAC?)</button></label>
-                        <textarea id="barcodeInput" rows="3" 
+                        <label for="barcodeInput">Scan CAC Barcode 
+                            <button type="button" id="noCacBtn" class="no-cac-link">(No CAC?)</button>
+                            <button type="button" id="devFillBtn" class="dev-fill-btn">[DEV] Fill Random</button>
+                        </label>
+                        <textarea id="barcodeInput" rows="1" autofocus 
                                   placeholder="Click here and scan a CAC barcode to add soldier..."></textarea>
-                        <div class="barcode-actions">
-                            <button type="button" id="parseBarcodeBtn" class="btn btn-parse">
-                                <i class="icon">▦</i>
-                                Parse Scanned Data
-                            </button>
-                            <button type="button" id="clearBarcodeBtn" class="btn btn-clear">
-                                <i class="icon">×</i>
-                                Clear
-                            </button>
-                        </div>
                     </div>
                     
                     
                     <div class="form-group">
                         <div class="soldiers-header">
-                            <label>Added Soldiers</label>
+                            <label>Added Soldiers <span id="soldierCount">(0)</span></label>
                             <button type="button" id="clearAllSoldiersBtn" class="btn btn-secondary btn-small" style="display: none;">
                                 Clear All
                             </button>
@@ -598,6 +734,52 @@
             </div>
         </div>
     </div>
+
+    <!-- Change Own Credentials Modal -->
+    <div id="changeOwnCredentialsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Change My PIN</h2>
+                <button class="modal-close" id="closeChangeOwnCredentialsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="info-message">
+                    <strong>🔑 CREDENTIAL UPDATE:</strong> Change your personal PIN to secure your account.
+                </div>
+                <form id="changeOwnCredentialsForm" class="user-form">
+                    <div class="form-group">
+                        <label for="currentPinOwn">Current PIN *</label>
+                        <input type="password" id="currentPinOwn" name="currentPin" pattern="[0-9]{4,}" minlength="4" required
+                               placeholder="Enter your current PIN">
+                    </div>
+                    <div class="form-group">
+                        <label for="newPinOwn">New PIN *</label>
+                        <input type="password" id="newPinOwn" name="newPin" pattern="[0-9]{4,}" minlength="4" required
+                               placeholder="Enter new PIN (minimum 4 digits)">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPinOwn">Confirm New PIN *</label>
+                        <input type="password" id="confirmPinOwn" name="confirmPin" pattern="[0-9]{4,}" minlength="4" required
+                               placeholder="Confirm new PIN">
+                    </div>
+                    <div id="changeOwnCredentialsError" class="error-message" style="display: none;"></div>
+                </form>
+            </div>
+            <div class="form-actions">
+                <button type="button" id="cancelChangeOwnCredentials" class="btn btn-secondary">Cancel</button>
+                <button type="button" id="submitChangeOwnCredentials" class="btn btn-primary">
+                    <span class="btn-text">Update PIN</span>
+                    <div class="btn-loader" style="display: none;"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="page-footer">
+        <div class="footer-content">
+            <span class="footer-credits">Made by PFC Fox, Gavin</span>
+        </div>
+    </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.5.3/jspdf.min.js"></script>
     <script type="module" src="js/SoldierSignOutApp.js"></script>

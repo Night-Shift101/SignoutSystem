@@ -51,7 +51,7 @@ class ModalManager {
             const response = await Utils.fetchWithAuth(`/api/signouts/${signoutId}`);
             if (response.ok) {
                 const signout = await response.json();
-                this.updateSignInDetails(signout);
+                this.updateSignInDetails(signout.data);
             } else {
                 this.updateSignInDetailsBasic(soldierNames, 'Unknown Location');
             }
@@ -284,8 +284,8 @@ class ModalManager {
             const response = await Utils.fetchWithAuth(`/api/signouts/${signoutId}`);
             if (!response.ok) throw new Error('Failed to fetch sign-out details');
             
-            const signout = await response.json();
-            
+            const responseJson = await response.json();
+            const signout = responseJson.data
             let soldiers = signout.soldiers;
             if (!soldiers && signout.soldier_rank) {
                 soldiers = [{
@@ -832,7 +832,7 @@ class ModalManager {
             .join(' ');
         
         // Special styling for default permissions
-        const isDefault = ['view_dashboard', 'create_signout', 'sign_in_soldiers', 'view_logs', 'export_data'].includes(permission.name);
+        const isDefault = ['view_dashboard', 'view_settings','create_signout', 'sign_in_soldiers', 'view_logs', 'change_own_credentials','export_data'].includes(permission.name);
         const defaultNote = isDefault ? '<div class="permission-default-note">Default permission</div>' : '';
         
         // Disable checkbox if user can't grant this permission
@@ -973,6 +973,337 @@ class ModalManager {
 
     showManagePermissionsError(message) {
         const errorElement = this.app.domManager.get('managePermissionsError');
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+    }
+
+    /**
+     * Show audit details modal
+     * @param {Object} log - Audit log entry
+     */
+    showAuditDetailsModal(log) {
+        // Create modal HTML using the existing modal structure
+        const modalHTML = `
+            <div id="auditDetailsModal" class="modal show">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Audit Log Details</h3>
+                        <button type="button" class="modal-close-btn" id="auditDetailsCloseBtn">
+                            <span class="icon">×</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="audit-details-content">
+                            <div class="detail-row">
+                                <strong>Log ID:</strong> #${log.id}
+                            </div>
+                            <div class="detail-row">
+                                <strong>Action:</strong> 
+                                <span class="badge ${this.getActionBadgeClass(log.action_type)}">${log.action_type}</span>
+                            </div>
+                            <div class="detail-row">
+                                <strong>Target:</strong> ${this.formatTargetInfoForModal(log)}
+                            </div>
+                            <div class="detail-row">
+                                <strong>User:</strong> ${this.formatUserDisplay(log)}
+                            </div>
+                            <div class="detail-row">
+                                <strong>Timestamp:</strong> ${Utils.formatDateTime(log.timestamp)}
+                            </div>
+                            <div class="detail-row">
+                                <strong>Description:</strong> ${log.description}
+                            </div>
+                            ${log.ip_address ? `<div class="detail-row"><strong>IP Address:</strong> ${log.ip_address}</div>` : ''}
+                            ${log.user_agent ? `<div class="detail-row"><strong>User Agent:</strong> ${log.user_agent}</div>` : ''}
+                            ${this.renderValueChanges(log)}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="auditDetailsCloseFooterBtn">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if present
+        const existingModal = document.getElementById('auditDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Add event listeners
+        const modal = document.getElementById('auditDetailsModal');
+        const closeBtn = document.getElementById('auditDetailsCloseBtn');
+        const closeFooterBtn = document.getElementById('auditDetailsCloseFooterBtn');
+        
+        // Close modal when clicking the X button
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeAuditDetailsModal());
+        }
+        
+        // Close modal when clicking the Close button
+        if (closeFooterBtn) {
+            closeFooterBtn.addEventListener('click', () => this.closeAuditDetailsModal());
+        }
+        
+        // Close modal when clicking the overlay (outside the modal content)
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.closeAuditDetailsModal();
+                }
+            });
+        }
+    }
+
+    /**
+     * Close audit details modal
+     */
+    closeAuditDetailsModal() {
+        const modal = document.getElementById('auditDetailsModal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    /**
+     * Format user display as "Rank Name (UserID)"
+     * @param {Object} log - Audit log entry
+     * @returns {string} Formatted user display
+     */
+    formatUserDisplay(log) {
+        const userName = log.user_name || 'System';
+        const userId = log.user_id;
+        
+        if (userId && userName !== 'System') {
+            return `${userName} (${userId})`;
+        }
+        
+        return userName;
+    }
+
+    /**
+     * Get CSS class for action badge
+     * @param {string} actionType - Action type
+     * @returns {string} CSS class
+     */
+    getActionBadgeClass(actionType) {
+        switch (actionType) {
+            case 'CREATE': return 'badge-success';
+            case 'UPDATE': return 'badge-warning';
+            case 'DELETE': return 'badge-danger';
+            case 'ACTIVATE': return 'badge-success';
+            case 'DEACTIVATE': return 'badge-warning';
+            case 'VIEW': return 'badge-info';
+            default: return 'badge-secondary';
+        }
+    }
+
+    /**
+     * Format target information for modal display
+     * @param {Object} log - Audit log entry
+     * @returns {string} Formatted target info
+     */
+    formatTargetInfoForModal(log) {
+        if (log.table_name === 'users') {
+            // For user operations, try to extract user info from values
+            let userInfo = null;
+            
+            // Try new_values first (for CREATE/UPDATE), then old_values (for DELETE)
+            if (log.new_values && (log.new_values.rank || log.new_values.full_name || log.new_values.username)) {
+                userInfo = log.new_values;
+            } else if (log.old_values && (log.old_values.rank || log.old_values.full_name || log.old_values.username)) {
+                userInfo = log.old_values;
+            }
+            
+            if (userInfo) {
+                const rank = userInfo.rank || '';
+                const fullName = userInfo.full_name || '';
+                const username = userInfo.username || '';
+                const userId = log.record_id || '';
+                
+                // Format as "Rank Name (UserID)"
+                let display = '';
+                if (rank && fullName) {
+                    display = `${rank} ${fullName}`;
+                } else if (fullName) {
+                    display = fullName;
+                } else if (username) {
+                    display = username;
+                } else {
+                    display = 'User';
+                }
+                
+                if (userId) {
+                    display += ` (${userId})`;
+                }
+                
+                return display;
+            } else {
+                // Fallback when user info is not available in values
+                // This happens for PIN updates where only the pin field is changed
+                const userId = log.record_id || '';
+                if (userId) {
+                    return `User #${userId}`;
+                }
+                return 'User';
+            }
+        }
+        
+        // Default format for non-user tables or when user info is not available
+        let info = log.table_name;
+        if (log.record_id) {
+            info += ` #${log.record_id}`;
+        }
+        return info;
+    }
+
+    /**
+     * Render value changes section
+     * @param {Object} log - Audit log entry
+     * @returns {string} HTML for value changes
+     */
+    renderValueChanges(log) {
+        if (!log.old_values && !log.new_values) {
+            return '';
+        }
+
+        let html = '<div class="detail-section"><strong>Changes:</strong>';
+        
+        if (log.old_values && log.new_values) {
+            // Show comparison for updates
+            html += '<div class="value-comparison">';
+            const allKeys = new Set([...Object.keys(log.old_values), ...Object.keys(log.new_values)]);
+            
+            for (const key of allKeys) {
+                const oldValue = log.old_values[key];
+                const newValue = log.new_values[key];
+                
+                if (oldValue !== newValue) {
+                    html += `
+                        <div class="change-row">
+                            <strong>${key}:</strong>
+                            <div class="value-change">
+                                <span class="old-value">From: ${this.formatValue(oldValue)}</span>
+                                <span class="arrow">→</span>
+                                <span class="new-value">To: ${this.formatValue(newValue)}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            html += '</div>';
+        } else if (log.new_values) {
+            // Show new values for creates
+            html += '<div class="new-values">';
+            for (const [key, value] of Object.entries(log.new_values)) {
+                html += `<div class="value-row"><strong>${key}:</strong> ${this.formatValue(value)}</div>`;
+            }
+            html += '</div>';
+        } else if (log.old_values) {
+            // Show old values for deletes
+            html += '<div class="old-values">';
+            for (const [key, value] of Object.entries(log.old_values)) {
+                html += `<div class="value-row"><strong>${key}:</strong> ${this.formatValue(value)}</div>`;
+            }
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        return html;
+    }
+
+    /**
+     * Format value for display
+     * @param {any} value - Value to format
+     * @returns {string} Formatted value
+     */
+    formatValue(value) {
+        if (value === null || value === undefined) {
+            return '<em>null</em>';
+        }
+        if (typeof value === 'boolean') {
+            return value ? 'true' : 'false';
+        }
+        if (typeof value === 'object') {
+            return JSON.stringify(value);
+        }
+        return String(value);
+    }
+
+    /**
+     * Open the change own credentials modal
+     */
+    openChangeOwnCredentialsModal() {
+        const modal = this.app.domManager.get('changeOwnCredentialsModal');
+        const userDisplay = this.app.domManager.get('myAccountUserDisplay');
+        
+        if (!modal) {
+            console.error('Change own credentials modal not found');
+            return;
+        }
+
+        // Update user display
+        if (userDisplay && this.app.currentUser) {
+            userDisplay.textContent = `${this.app.currentUser.rank} ${this.app.currentUser.full_name}`;
+        }
+
+        // Clear any previous errors and form data
+        this.clearChangeOwnCredentialsError();
+        this.clearChangeOwnCredentialsForm();
+        
+        modal.style.display = 'flex';
+    }
+
+    /**
+     * Close the change own credentials modal
+     */
+    closeChangeOwnCredentialsModal() {
+        const modal = this.app.domManager.get('changeOwnCredentialsModal');
+        if (modal) {
+            modal.style.display = 'none';
+            this.clearChangeOwnCredentialsError();
+            this.clearChangeOwnCredentialsForm();
+        }
+    }
+
+    /**
+     * Clear change own credentials form
+     */
+    clearChangeOwnCredentialsForm() {
+        const currentPin = this.app.domManager.get('currentPinOwn');
+        const newPin = this.app.domManager.get('newPinOwn');
+        const confirmPin = this.app.domManager.get('confirmPinOwn');
+        
+        if (currentPin) currentPin.value = '';
+        if (newPin) newPin.value = '';
+        if (confirmPin) confirmPin.value = '';
+    }
+
+    /**
+     * Clear change own credentials error message
+     */
+    clearChangeOwnCredentialsError() {
+        const errorElement = this.app.domManager.get('changeOwnCredentialsError');
+        if (errorElement) {
+            errorElement.style.display = 'none';
+            errorElement.textContent = '';
+        }
+    }
+
+    /**
+     * Show change own credentials error message
+     * @param {string} message - Error message to show
+     */
+    showChangeOwnCredentialsError(message) {
+        const errorElement = this.app.domManager.get('changeOwnCredentialsError');
         if (errorElement) {
             errorElement.textContent = message;
             errorElement.style.display = 'block';

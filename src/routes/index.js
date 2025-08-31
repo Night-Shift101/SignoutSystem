@@ -5,6 +5,7 @@ const usersRoutes = require('./users');
 const signoutsRoutes = require('./signouts');
 const settingsRoutes = require('./settings');
 const preferencesRoutes = require('./preferences');
+const auditLogsRoutes = require('./audit-logs');
 
 module.exports = {
     mainRoutes,
@@ -12,5 +13,6 @@ module.exports = {
     usersRoutes,
     signoutsRoutes,
     settingsRoutes,
-    preferencesRoutes
+    preferencesRoutes,
+    auditLogsRoutes
 };

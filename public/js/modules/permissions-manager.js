@@ -1,8 +1,11 @@
+import { globalFrontendErrorHandler, ErrorCategory, ErrorSeverity } from './frontend-error-handler.js';
+
 class PermissionsManager {
     constructor(app) {
         this.app = app;
         this.userPermissions = [];
         this.permissionsLoaded = false;
+        this.errorHandler = globalFrontendErrorHandler.createContextHandler('PermissionsManager');
         this.initializeTooltipPositioning();
     }
 
@@ -129,6 +132,14 @@ class PermissionsManager {
     }
 
     /**
+     * Check if user can change their own credentials
+     * @returns {boolean}
+     */
+    canChangeOwnCredentials() {
+        return this.hasPermission('change_own_credentials') || this.isAdmin();
+    }
+
+    /**
      * Check if user can manage permissions
      * @returns {boolean}
      */
@@ -142,6 +153,14 @@ class PermissionsManager {
      */
     canViewSettings() {
         return this.hasPermission('view_settings') || this.isAdmin();
+    }
+
+    /**
+     * Check if user can view audit logs
+     * @returns {boolean}
+     */
+    canViewAuditLogs() {
+        return this.hasPermission('view_audit_logs') || this.isAdmin();
     }
 
     /**
@@ -374,7 +393,7 @@ class PermissionsManager {
         const children = {
             'view_dashboard': ['create_signout', 'sign_in_soldiers'],
             'view_logs': ['export_data'],
-            'view_settings': ['create_users', 'delete_users', 'deactivate_users', 'change_user_pins', 'manage_permissions']
+            'view_settings': ['change_own_credentials','create_users', 'delete_users', 'deactivate_users', 'change_user_pins', 'manage_permissions']
         };
         return children[permissionName] || [];
     }
@@ -391,7 +410,8 @@ class PermissionsManager {
             'delete_users': 'view_settings',
             'deactivate_users': 'view_settings',
             'change_user_pins': 'view_settings',
-            'manage_permissions': 'view_settings'
+            'manage_permissions': 'view_settings',
+            'change_own_credentials': 'view_settings'
         };
         return dependencies[permissionName] || null;
     }
@@ -455,13 +475,15 @@ class PermissionsManager {
     initializeTooltipPositioning() {
         // Add event listeners for dynamic tooltip positioning
         document.addEventListener('mouseenter', (e) => {
-            if (e.target.classList.contains('disabled-no-permission')) {
+            // Defensive check - ensure target exists and has classList
+            if (e.target && e.target.classList && e.target.classList.contains('disabled-no-permission')) {
                 this.positionTooltip(e.target);
             }
         }, true);
         
         document.addEventListener('mouseleave', (e) => {
-            if (e.target.classList.contains('disabled-no-permission')) {
+            // Defensive check - ensure target exists and has classList
+            if (e.target && e.target.classList && e.target.classList.contains('disabled-no-permission')) {
                 this.hideTooltip(e.target);
             }
         }, true);
@@ -471,18 +493,31 @@ class PermissionsManager {
      * Position tooltip dynamically based on button position
      */
     positionTooltip(button) {
-        const rect = button.getBoundingClientRect();
-        const tooltip = button.querySelector('::after');
-        
-        // Use CSS custom properties to position the tooltip
-        button.style.setProperty('--tooltip-left', `${rect.left + rect.width / 2}px`);
-        button.style.setProperty('--tooltip-top', `${rect.top - 40}px`);
+        // Defensive check - ensure button exists and has required methods
+        if (!button || !button.getBoundingClientRect || !button.style) {
+            console.warn('PermissionsManager: Invalid button element for tooltip positioning');
+            return;
+        }
+
+        try {
+            const rect = button.getBoundingClientRect();
+            
+            // Use CSS custom properties to position the tooltip
+            button.style.setProperty('--tooltip-left', `${rect.left + rect.width / 2}px`);
+            button.style.setProperty('--tooltip-top', `${rect.top - 40}px`);
+        } catch (error) {
+            console.warn('PermissionsManager: Error positioning tooltip:', error);
+        }
     }
     
     /**
      * Hide tooltip
      */
     hideTooltip(button) {
+        // Defensive check - ensure button exists
+        if (!button) {
+            return;
+        }
         // Tooltip hiding is handled by CSS :hover state
     }
 }

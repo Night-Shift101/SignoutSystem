@@ -14,6 +14,7 @@ const signoutsRoutes = require('./src/routes/signouts');
 const settingsRoutes = require('./src/routes/settings');
 const preferencesRoutes = require('./src/routes/preferences');
 const permissionsRoutes = require('./src/routes/permissions');
+const auditLogsRoutes = require('./src/routes/audit-logs');
 const Database = require('./src/database/database');
 const PermissionsMiddleware = require('./src/middleware/permissions');
 
@@ -69,6 +70,7 @@ app.use((req, res, next) => {
 // Database middleware
 app.use((req, res, next) => {
     req.db = db;
+    req.auditManager = db.auditManager;
     req.permissionsMiddleware = permissionsMiddleware;
     req.errorHandler = globalErrorHandler.createContextHandler('Server');
     next();
@@ -82,6 +84,18 @@ app.use('/api/signouts', signoutsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/preferences', preferencesRoutes(db));
 app.use('/api/permissions', permissionsRoutes);
+app.use('/api/audit-logs', auditLogsRoutes);
+
+// Configuration endpoint to serve UI settings
+app.get('/api/config', (req, res) => {
+    const config = {
+        showNoCacLink: process.env.SHOW_NO_CAC_LINK === 'true',
+        showDevButton: process.env.SHOW_DEV_BUTTON === 'true'
+    };
+    
+    const configResponse = req.errorHandler.success(config, 'Configuration loaded');
+    res.status(200).json(configResponse);
+});
 
 // Health check endpoint for connection monitoring
 app.get('/api/health', (req, res) => {

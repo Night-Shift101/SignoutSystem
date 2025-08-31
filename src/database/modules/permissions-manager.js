@@ -27,6 +27,10 @@ class PermissionsManager {
                 description: 'View system settings'
             },
             {
+                name: 'view_audit_logs',
+                description: 'View system audit logs and user activity history'
+            },
+            {
                 name: 'create_users',
                 description: 'Create new user accounts'
             },
@@ -47,6 +51,10 @@ class PermissionsManager {
                 description: 'Change other users\' PINs'
             },
             {
+                name: 'change_own_credentials',
+                description: 'Change own PIN and password'
+            },
+            {
                 name: 'system_admin',
                 description: 'Full system administration access'
             }
@@ -56,7 +64,7 @@ class PermissionsManager {
         this.permissionDependencies = {
             'view_dashboard': ['create_signout', 'sign_in_soldiers'],
             'view_logs': ['export_data'],
-            'view_settings': ['create_users', 'delete_users', 'deactivate_users', 'change_user_pins', 'manage_permissions']
+            'view_settings': ['change_own_credentials','view_audit_logs', 'create_users', 'delete_users', 'deactivate_users', 'change_user_pins', 'manage_permissions']
         };
     }
 
@@ -909,7 +917,9 @@ class PermissionsManager {
             'create_signout',
             'sign_in_soldiers',
             'view_logs',
-            'export_data'
+            'export_data',
+            'view_settings',
+            'change_own_credentials'
         ];
     }
 

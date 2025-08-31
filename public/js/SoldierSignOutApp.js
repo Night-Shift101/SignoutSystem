@@ -10,10 +10,12 @@ import SignOutManager from './modules/signout-manager.js';
 import LogsManager from './modules/logs-manager.js';
 import UserManager from './modules/user-manager.js';
 import SettingsManager from './modules/settings-manager.js';
+import AuditLogsManager from './modules/audit-logs-manager.js';
 import ThemeManager from './modules/theme-manager.js';
 import KeyboardManager from './modules/keyboard-manager.js';
 import ConnectionManager from './modules/connection-manager.js';
 import PermissionsManager from './modules/permissions-manager.js';
+import ConfigManager from './modules/config-manager.js';
 import Utils from './modules/utils.js';
 import { globalFrontendErrorHandler } from './modules/frontend-error-handler.js';
 
@@ -28,12 +30,45 @@ class SoldierSignOutApp {
         this.initializeManagers();
         this.initializeElements();
         this.attachEventListeners();
+        this.loadConfigurationAndAuth();
+    }
+
+    async loadConfigurationAndAuth() {
+        // Load configuration first
+        await this.configManager.loadConfig();
+        this.applyConfiguration();
+        
+        // Then check authentication
         this.authManager.checkAuthentication();
+    }
+
+    /**
+     * Apply configuration settings to UI elements
+     */
+    applyConfiguration() {
+        const noCacBtn = document.getElementById('noCacBtn');
+        const devFillBtn = document.getElementById('devFillBtn');
+        
+        // Show/hide No CAC link based on configuration
+        if (noCacBtn) {
+            noCacBtn.style.display = this.configManager.shouldShowNoCacLink() ? 'inline-block' : 'none';
+        }
+        
+        // Show/hide Dev button based on configuration
+        if (devFillBtn) {
+            devFillBtn.style.display = this.configManager.shouldShowDevButton() ? 'inline-block' : 'none';
+        }
+        
+        console.log('Configuration applied:', {
+            showNoCacLink: this.configManager.shouldShowNoCacLink(),
+            showDevButton: this.configManager.shouldShowDevButton()
+        });
     }
 
     initializeManagers() {
         this.domManager = new DOMManager();
         this.notificationManager = new NotificationManager();
+        this.configManager = new ConfigManager();
         
         // Configure global error handler with notification manager
         globalFrontendErrorHandler.notificationManager = this.notificationManager;
@@ -48,6 +83,7 @@ class SoldierSignOutApp {
         this.logsManager = new LogsManager(this);
         this.userManager = new UserManager(this);
         this.settingsManager = new SettingsManager(this);
+        this.auditLogsManager = new AuditLogsManager(this);
         this.themeManager = new ThemeManager(this);
         this.keyboardManager = new KeyboardManager(this);
         this.connectionManager = new ConnectionManager(this);

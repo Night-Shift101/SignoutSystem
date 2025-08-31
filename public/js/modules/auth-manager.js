@@ -127,33 +127,50 @@ class AuthManager {
 
     async authenticateForSettings(pin) {
         try {
+            // Debug logging to check what we're sending
+            console.log('🔐 AuthManager.authenticateForSettings called');
+            console.log('📊 Current user:', this.currentUser);
+            console.log('🔢 PIN provided:', pin ? '***' : 'NONE');
+            console.log('🆔 User ID to authenticate:', this.currentUser?.id);
+
+            if (!this.currentUser || !this.currentUser.id) {
+                const errorMsg = 'No current user found for settings authentication';
+                console.error('❌ Settings auth failed:', errorMsg);
+                this.app.modalManager.showPinError('Authentication error. Please reload the page.');
+                return this.errorHandler.failure(errorMsg, {
+                    category: ErrorCategory.AUTHENTICATION,
+                    severity: ErrorSeverity.HIGH,
+                    details: { currentUser: this.currentUser }
+                });
+            }
+
+            const requestData = { 
+                userId: this.currentUser.id, 
+                pin: pin 
+            };
+
+            console.log('📤 Sending request data:', { userId: requestData.userId, pin: '***' });
+
             const result = await Utils.safeApiCall('/api/auth/user', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    userId: this.currentUser.id, 
-                    pin: pin 
-                })
+                body: JSON.stringify(requestData)
             }, 'Settings authentication');
             
+            console.log('📥 Received response:', result);
+
             if (!result.success) {
+                console.error('❌ Authentication failed:', result.error);
                 this.app.modalManager.showPinError(result.error || 'Invalid PIN');
                 return result;
             }
             
-            const authResult = result.data;
-            
-            if (authResult.success) {
-                this.app.modalManager.closePinModal();
-                this.app.viewManager.showSettingsView();
-                return this.errorHandler.success(authResult, 'Settings access granted', true);
-            } else {
-                this.app.modalManager.showPinError('Invalid PIN');
-                return this.errorHandler.failure('Invalid PIN', {
-                    category: ErrorCategory.AUTHENTICATION,
-                    severity: ErrorSeverity.MEDIUM
-                });
-            }
+            // Server response is successful - result.success is true
+            // The authentication data is in result.data
+            console.log('✅ Authentication successful!');
+            this.app.modalManager.closePinModal();
+            this.app.viewManager.showSettingsView();
+            return this.errorHandler.success(result.data, 'Settings access granted', true);
         } catch (error) {
             console.error('Settings authentication error:', error);
             this.app.modalManager.showPinError('Authentication failed');
@@ -167,8 +184,12 @@ class AuthManager {
 
     async authenticateUserSwitch(pin) {
         if (!this.targetUser) {
+            const errorMsg = 'No user selected for switching';
             this.app.modalManager.showPinError('No user selected');
-            return;
+            return this.errorHandler.failure(errorMsg, {
+                category: ErrorCategory.VALIDATION,
+                severity: ErrorSeverity.MEDIUM
+            });
         }
 
         const targetUserInfo = {
@@ -178,57 +199,74 @@ class AuthManager {
         };
 
         try {
-            const response = await Utils.fetchWithAuth('/api/auth/user', {
+            console.log('🔄 AuthManager.authenticateUserSwitch called');
+            console.log('🎯 Target user:', targetUserInfo);
+            console.log('🔢 PIN provided:', pin ? '***' : 'NONE');
+
+            const result = await Utils.safeApiCall('/api/auth/user', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     userId: targetUserInfo.id, 
                     pin: pin 
                 })
-            });
+            }, 'User switch authentication');
             
-            if (!response.ok) {
-                throw new Error('Invalid PIN');
+            console.log('📥 User switch response:', result);
+
+            if (!result.success) {
+                console.error('❌ User switch failed:', result.error);
+                this.app.modalManager.showPinError(result.error || 'Invalid PIN');
+                return result;
             }
             
-            const result = await response.json();
+            // Server response is successful
+            console.log('✅ User switch authentication successful!');
+            this.app.modalManager.closePinModal();
             
-            if (result.success) {
-                this.app.modalManager.closePinModal();
-                
-                // Update current user
-                this.currentUser = targetUserInfo;
-                this.app.currentUser = targetUserInfo;
-                
-                // Update UI
-                const currentUserName = this.app.domManager.get('currentUserName');
-                if (currentUserName) {
-                    currentUserName.textContent = `${targetUserInfo.rank} ${targetUserInfo.full_name}`;
-                }
-                
-                // Load user permissions
-                if (this.app.permissionsManager) {
-                    await this.app.permissionsManager.loadUserPermissions();
-                    this.app.permissionsManager.applyPermissionBasedVisibility();
-                }
-                
-                // Load user theme preference
-                if (this.app.themeManager) {
-                    await this.app.themeManager.loadThemePreference();
-                }
-                
-                this.app.notificationManager.showNotification(`Switched to ${targetUserInfo.rank} ${targetUserInfo.full_name}`, 'success');
-                
-                // Validate current view permissions and refresh appropriate data
-                if (this.app.viewManager) {
-                    this.app.viewManager.validateCurrentViewPermissions();
-                }
-            } else {
-                this.app.modalManager.showPinError('Invalid PIN');
+            // Update current user
+            this.currentUser = targetUserInfo;
+            this.app.currentUser = targetUserInfo;
+            
+            // Update UI
+            const currentUserName = this.app.domManager.get('currentUserName');
+            if (currentUserName) {
+                currentUserName.textContent = `${targetUserInfo.rank} ${targetUserInfo.full_name}`;
             }
+            
+            // Refresh data with new user context
+            if (this.app.signOutManager) {
+                await this.app.signOutManager.loadCurrentSignOuts();
+            }
+            
+            // Apply new user's permissions
+            if (this.app.permissionsManager) {
+                await this.app.permissionsManager.loadUserPermissions();
+                this.app.permissionsManager.applyPermissionBasedVisibility();
+            }
+            
+            // Load user theme preference
+            if (this.app.themeManager) {
+                await this.app.themeManager.loadThemePreference();
+            }
+            
+            this.app.notificationManager.showNotification(`Switched to ${targetUserInfo.rank} ${targetUserInfo.full_name}`, 'success');
+            
+            // Validate current view permissions and refresh appropriate data
+            if (this.app.viewManager) {
+                this.app.viewManager.validateCurrentViewPermissions();
+            }
+
+            return this.errorHandler.success(result.data, 'User switch successful', true);
         } catch (error) {
             console.error('User switch error:', error);
-            this.app.modalManager.showPinError('Invalid PIN');
+            const errorMsg = 'User switch failed';
+            this.app.modalManager.showPinError('Authentication failed');
+            return this.errorHandler.failure(errorMsg, {
+                category: ErrorCategory.AUTHENTICATION,
+                severity: ErrorSeverity.MEDIUM,
+                originalError: error
+            });
         }
     }
 

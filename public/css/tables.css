@@ -100,6 +100,7 @@
     border-bottom: 1px solid var(--border-light);
     font-size: 14px;
     vertical-align: top;
+    
 }
 
 .signouts-table tr:hover {
@@ -109,14 +110,26 @@
 /* Table Column Widths */
 .signouts-table td:nth-child(1) { width: 140px; min-width: 140px; }
 .signouts-table td:nth-child(2) { width: 320px; max-width: 320px; }
-.signouts-table td:nth-child(3) { width: 200px; }
+.signouts-table td:nth-child(3) { 
+    width: 200px; 
+    max-width: 200px; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+}
 .signouts-table td:nth-child(4) { width: 150px; }
 .signouts-table td:nth-child(5) { width: 150px; }
 .signouts-table td:nth-child(6) { width: 180px; }
 .signouts-table td:nth-child(7) { width: 180px; }
 .signouts-table th:nth-child(8), .signouts-table td:nth-child(8) { width: 180px; }
 .signouts-table th:nth-child(9), .signouts-table td:nth-child(9) { width: 100px; }
-.signouts-table th:nth-child(10), .signouts-table td:nth-child(10) { width: 300px; }
+.signouts-table th:nth-child(10), .signouts-table td:nth-child(10) { 
+    width: 300px; 
+    max-width: 300px; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+}
 
 /* Status Badges */
 .status-badge {

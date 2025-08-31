@@ -510,6 +510,104 @@ class UserManager {
             }
         }
     }
+
+    async handleChangeOwnCredentials() {
+        console.log('Handling change own credentials');
+        
+        try {
+            const currentPin = this.app.domManager.get('currentPinOwn');
+            const newPin = this.app.domManager.get('newPinOwn');
+            const confirmPin = this.app.domManager.get('confirmPinOwn');
+            const submitButton = this.app.domManager.get('submitChangeOwnCredentials');
+            
+            // Validate inputs
+            if (!currentPin || !newPin || !confirmPin) {
+                this.app.modalManager.showChangeOwnCredentialsError('All fields are required');
+                return;
+            }
+
+            const currentPinValue = currentPin.value.trim();
+            const newPinValue = newPin.value.trim();
+            const confirmPinValue = confirmPin.value.trim();
+
+            if (!currentPinValue || !newPinValue || !confirmPinValue) {
+                this.app.modalManager.showChangeOwnCredentialsError('All fields are required');
+                return;
+            }
+
+            if (newPinValue.length < 4) {
+                this.app.modalManager.showChangeOwnCredentialsError('New PIN must be at least 4 digits');
+                return;
+            }
+
+            if (!/^\d+$/.test(newPinValue)) {
+                this.app.modalManager.showChangeOwnCredentialsError('PIN must contain only numbers');
+                return;
+            }
+
+            if (newPinValue !== confirmPinValue) {
+                this.app.modalManager.showChangeOwnCredentialsError('New PIN and confirmation do not match');
+                return;
+            }
+
+            if (currentPinValue === newPinValue) {
+                this.app.modalManager.showChangeOwnCredentialsError('New PIN must be different from current PIN');
+                return;
+            }
+
+            // Show loading state
+            Utils.showLoading(true);
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.querySelector('.btn-text').textContent = 'Updating...';
+            }
+
+            // Clear any previous errors
+            this.app.modalManager.clearChangeOwnCredentialsError();
+
+            // Send request to update credentials
+            const response = await Utils.fetchWithAuth('/api/users/me/credentials', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    currentPin: currentPinValue,
+                    newPin: newPinValue,
+                    confirmPin: confirmPinValue
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                if (result.errors && Array.isArray(result.errors)) {
+                    const errorMessage = result.errors.map(err => err.msg).join(', ');
+                    throw new Error(errorMessage);
+                }
+                throw new Error(result.error || 'Failed to update credentials');
+            }
+
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to update credentials');
+            }
+
+            // Success - close modal and show notification
+            this.app.modalManager.closeChangeOwnCredentialsModal();
+            this.app.notificationManager.showNotification('PIN updated successfully', 'success');
+
+        } catch (error) {
+            console.error('Error changing own credentials:', error);
+            this.app.modalManager.showChangeOwnCredentialsError(error.message || 'Failed to update credentials');
+        } finally {
+            Utils.showLoading(false);
+            const submitButton = this.app.domManager.get('submitChangeOwnCredentials');
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.querySelector('.btn-text').textContent = 'Update PIN';
+            }
+        }
+    }
 }
 
 export default UserManager;

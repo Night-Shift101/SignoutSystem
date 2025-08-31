@@ -51,6 +51,7 @@ class DOMManager {
             
             // Manual entry modal elements
             noCacBtn: document.getElementById('noCacBtn'),
+            devFillBtn: document.getElementById('devFillBtn'),
             manualEntryModal: document.getElementById('manualEntryModal'),
             closeManualEntryModal: document.getElementById('closeManualEntryModal'),
             cancelManualEntry: document.getElementById('cancelManualEntry'),
@@ -157,7 +158,20 @@ class DOMManager {
             permissionsCheckboxes: document.getElementById('permissionsCheckboxes'),
             cancelManagePermissions: document.getElementById('cancelManagePermissions'),
             submitManagePermissions: document.getElementById('submitManagePermissions'),
-            managePermissionsError: document.getElementById('managePermissionsError')
+            managePermissionsError: document.getElementById('managePermissionsError'),
+            
+            // Change own credentials modal elements
+            changeOwnCredentialsBtn: document.getElementById('changeOwnCredentialsBtn'),
+            changeOwnCredentialsModal: document.getElementById('changeOwnCredentialsModal'),
+            closeChangeOwnCredentialsModal: document.getElementById('closeChangeOwnCredentialsModal'),
+            changeOwnCredentialsForm: document.getElementById('changeOwnCredentialsForm'),
+            currentPinOwn: document.getElementById('currentPinOwn'),
+            newPinOwn: document.getElementById('newPinOwn'),
+            confirmPinOwn: document.getElementById('confirmPinOwn'),
+            cancelChangeOwnCredentials: document.getElementById('cancelChangeOwnCredentials'),
+            submitChangeOwnCredentials: document.getElementById('submitChangeOwnCredentials'),
+            changeOwnCredentialsError: document.getElementById('changeOwnCredentialsError'),
+            myAccountUserDisplay: document.getElementById('myAccountUserDisplay')
         };
     }
 

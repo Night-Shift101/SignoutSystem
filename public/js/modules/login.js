@@ -1,8 +1,11 @@
+import { globalFrontendErrorHandler, ErrorCategory, ErrorSeverity } from './frontend-error-handler.js';
+
 class LoginApp {
     constructor() {
         this.currentStep = 'system'; 
         this.users = [];
         this.authCheckInProgress = false;
+        this.errorHandler = globalFrontendErrorHandler.createContextHandler('LoginApp');
         this.initializeElements();
         this.attachEventListeners();
         this.checkExistingSession();
@@ -118,9 +121,15 @@ class LoginApp {
                     this.showMessage('You are already logged in. Click here to go to dashboard.');
                 }
             } else if (result.systemAuthenticated) {
-                
-                await this.loadUsers();
-                this.showUserStep();
+                // Load users and check for success before showing user step
+                const loadResult = await this.loadUsers();
+                if (loadResult.success) {
+                    this.showUserStep();
+                } else {
+                    // If loading users failed, fall back to system step
+                    console.error('Failed to load users during session check:', loadResult.error);
+                    this.showSystemStep();
+                }
             } else {
                 
                 this.showSystemStep();
@@ -133,12 +142,16 @@ class LoginApp {
         }
     }
 
+    /**
+     * Handles system password authentication
+     * @returns {Promise<StandardResponse>} Success/failure response
+     */
     async handleSystemLogin() {
         const password = this.systemPassword.value.trim();
         
         if (!password) {
             this.showSystemError('Please enter the system password.');
-            return;
+            return this.errorHandler.validationError('System password is required');
         }
 
         this.setSystemLoading(true);
@@ -157,20 +170,61 @@ class LoginApp {
             const result = await response.json();
 
             if (response.ok && result.success) {
-                this.users = result.users; // Use users from system auth response
-                this.populateUserSelect();
+                // Extract users from the correct location in the response
+                const users = result.data?.users || result.users;
+                
+                // Validate that we received users data
+                if (!users || !Array.isArray(users)) {
+                    const errorMsg = 'Invalid user data received from server';
+                    console.error('System login error: Invalid users data', result);
+                    this.showSystemError('Failed to load user list. Please try again.');
+                    return this.errorHandler.failure(errorMsg, {
+                        category: ErrorCategory.DATA,
+                        severity: ErrorSeverity.HIGH,
+                        details: { serverResponse: result }
+                    });
+                }
+
+                this.users = users; // Use users from system auth response
+                
+                // Safely populate user select with error handling
+                const populateResult = this.populateUserSelect();
+                if (!populateResult.success) {
+                    return populateResult; // Return the error from populateUserSelect
+                }
+
                 this.showUserStep();
+                return this.errorHandler.success(
+                    { userCount: this.users.length }, 
+                    'System authentication successful', 
+                    false
+                );
             } else {
-                this.showSystemError(result.error || 'Invalid system password');
+                const errorMsg = result.error || 'Invalid system password';
+                this.showSystemError(errorMsg);
+                return this.errorHandler.failure(errorMsg, {
+                    category: ErrorCategory.AUTHENTICATION,
+                    severity: ErrorSeverity.MEDIUM
+                });
             }
         } catch (error) {
             console.error('System login error:', error);
-            this.showSystemError('Connection failed. Please try again.');
+            const errorMsg = 'Connection failed. Please try again.';
+            this.showSystemError(errorMsg);
+            return this.errorHandler.failure(errorMsg, {
+                category: ErrorCategory.NETWORK,
+                severity: ErrorSeverity.HIGH,
+                originalError: error
+            });
         } finally {
             this.setSystemLoading(false);
         }
     }
 
+    /**
+     * Loads users from the API with standardized error handling
+     * @returns {Promise<StandardResponse>} Success/failure response
+     */
     async loadUsers() {
         try {
             const response = await fetch('/api/users', {
@@ -178,91 +232,213 @@ class LoginApp {
             });
 
             if (response.ok) {
-                this.users = await response.json();
-                this.populateUserSelect();
+                const result = await response.json();
+                
+                // Handle standardized response format
+                if (result.success) {
+                    const users = result.data; // Users are directly in result.data for this endpoint
+                    
+                    // Validate that we received valid users data
+                    if (!users || !Array.isArray(users)) {
+                        const errorMsg = 'Invalid user data received from server';
+                        console.error('LoadUsers error: Invalid users data', result);
+                        this.showSystemError('Failed to load user list. Please try again.');
+                        return this.errorHandler.failure(errorMsg, {
+                            category: ErrorCategory.DATA,
+                            severity: ErrorSeverity.HIGH,
+                            details: { serverResponse: result }
+                        });
+                    }
+
+                    this.users = users;
+                } else {
+                    // Server returned an error in standardized format
+                    const errorMsg = result.error || 'Failed to load users';
+                    console.error('LoadUsers error:', result);
+                    this.showSystemError('Failed to load user list. Please try again.');
+                    return this.errorHandler.failure(errorMsg, {
+                        category: ErrorCategory.NETWORK,
+                        severity: ErrorSeverity.HIGH,
+                        details: { serverResponse: result }
+                    });
+                }
+                
+                // Safely populate user select with error handling
+                const populateResult = this.populateUserSelect();
+                if (!populateResult.success) {
+                    return populateResult; // Return the error from populateUserSelect
+                }
+
+                return this.errorHandler.success(
+                    { userCount: this.users.length }, 
+                    `Loaded ${this.users.length} users successfully`
+                );
             } else {
-                throw new Error('Failed to load users');
+                throw new Error(`Failed to load users: ${response.status} ${response.statusText}`);
             }
         } catch (error) {
             console.error('Error loading users:', error);
-            this.showSystemError('Failed to load user list. Please try again.');
+            const errorMsg = 'Failed to load user list. Please try again.';
+            this.showSystemError(errorMsg);
+            return this.errorHandler.failure(errorMsg, {
+                category: ErrorCategory.NETWORK,
+                severity: ErrorSeverity.HIGH,
+                originalError: error
+            });
         }
     }
 
+    /**
+     * Populates the user select dropdown with available NCOs
+     * @returns {StandardResponse} Success/failure response
+     */
     populateUserSelect() {
-        this.userSelect.innerHTML = '<option value="">Choose an NCO...</option>';
-        
-        this.users.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user.id;
+        try {
+            // Defensive check - ensure users array exists and is valid
+            if (!this.users || !Array.isArray(this.users)) {
+                const errorMsg = 'No user data available to populate selection';
+                console.error('PopulateUserSelect error: Invalid users data', this.users);
+                this.showSystemError('Failed to load user list. Please try again.');
+                return this.errorHandler.failure(errorMsg, {
+                    category: ErrorCategory.DATA,
+                    severity: ErrorSeverity.HIGH,
+                    details: { usersData: this.users }
+                });
+            }
+
+            this.userSelect.innerHTML = '<option value="">Choose an NCO...</option>';
             
-            // Add visual indicator for disabled accounts
-            option.textContent = `${user.rank} ${user.full_name}`;
-            
-            // Add data attribute to track status
-            option.dataset.isActive = user.is_active ? '1' : '0';
-            
-            this.userSelect.appendChild(option);
-        });
+            this.users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                
+                // Add visual indicator for disabled accounts
+                option.textContent = `${user.rank} ${user.full_name}`;
+                
+                // Add data attribute to track status
+                option.dataset.isActive = user.is_active ? '1' : '0';
+                
+                this.userSelect.appendChild(option);
+            });
+
+            return this.errorHandler.success(
+                { userCount: this.users.length }, 
+                `Loaded ${this.users.length} users successfully`
+            );
+        } catch (error) {
+            console.error('PopulateUserSelect error:', error);
+            this.showSystemError('Failed to load user list. Please try again.');
+            return this.errorHandler.failure('Failed to populate user selection', {
+                category: ErrorCategory.SYSTEM,
+                severity: ErrorSeverity.HIGH,
+                originalError: error
+            });
+        }
     }
 
+    /**
+     * Handles user PIN authentication
+     * @returns {Promise<StandardResponse>} Success/failure response
+     */
     async handleUserLogin() {
         const userId = this.userSelect.value;
         const pin = this.userPin.value.trim();
         
         if (!userId) {
             this.showUserError('Please select an NCO.');
-            return;
+            return this.errorHandler.validationError('User selection is required');
         }
         
         if (!pin) {
             this.showUserError('Please enter your PIN.');
-            return;
+            return this.errorHandler.validationError('PIN is required');
         }
 
         this.setUserLoading(true);
         this.hideUserError();
 
         try {
+            // Debug logging for login authentication
+            console.log('🔐 LoginApp.handleUserLogin called');
+            console.log('🆔 User ID selected:', userId);
+            console.log('🔢 PIN provided:', pin ? '***' : 'NONE');
+
+            const requestData = { userId: parseInt(userId), pin };
+            console.log('📤 Sending login request data:', { userId: requestData.userId, pin: '***' });
+
             const response = await fetch('/api/auth/user', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 credentials: 'same-origin',
-                body: JSON.stringify({ userId: parseInt(userId), pin })
+                body: JSON.stringify(requestData)
             });
 
             const result = await response.json();
+            console.log('📥 Login response received:', result);
 
             if (response.ok && result.success) {
-                
+                // Successful authentication - redirect to main app
                 window.location.href = '/';
+                return this.errorHandler.success(
+                    { userId: parseInt(userId) }, 
+                    'User authentication successful'
+                );
             } else {
-                this.showUserError(result.error || 'Invalid PIN');
+                const errorMsg = result.error || 'Invalid PIN';
+                this.showUserError(errorMsg);
+                return this.errorHandler.failure(errorMsg, {
+                    category: ErrorCategory.AUTHENTICATION,
+                    severity: ErrorSeverity.MEDIUM
+                });
             }
         } catch (error) {
             console.error('User login error:', error);
-            this.showUserError('Connection failed. Please try again.');
+            const errorMsg = 'Connection failed. Please try again.';
+            this.showUserError(errorMsg);
+            return this.errorHandler.failure(errorMsg, {
+                category: ErrorCategory.NETWORK,
+                severity: ErrorSeverity.HIGH,
+                originalError: error
+            });
         } finally {
             this.setUserLoading(false);
         }
     }
 
+    /**
+     * Handles user logout
+     * @returns {Promise<StandardResponse>} Success/failure response
+     */
     async handleLogout() {
         try {
-            await fetch('/api/auth/logout', {
+            const response = await fetch('/api/auth/logout', {
                 method: 'POST',
                 credentials: 'same-origin'
             });
             
+            // Clear form data and return to system step
             this.systemPassword.value = '';
             this.userPin.value = '';
             this.showSystemStep();
+            
+            if (response.ok) {
+                return this.errorHandler.success(null, 'Logged out successfully');
+            } else {
+                // Even if logout failed on server, we still cleared client state
+                console.warn('Server logout failed, but client state cleared');
+                return this.errorHandler.success(null, 'Client logout completed');
+            }
         } catch (error) {
             console.error('Logout error:', error);
-            
+            // Still show system step even if logout failed
             this.showSystemStep();
+            return this.errorHandler.failure('Logout request failed', {
+                category: ErrorCategory.NETWORK,
+                severity: ErrorSeverity.LOW, // Low severity since client state is cleared
+                originalError: error
+            });
         }
     }
 

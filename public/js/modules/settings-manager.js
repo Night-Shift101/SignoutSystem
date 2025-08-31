@@ -1,16 +1,33 @@
+import { globalFrontendErrorHandler, ErrorCategory, ErrorSeverity } from './frontend-error-handler.js';
+
 class SettingsManager {
     constructor(app) {
         this.app = app;
+        this.errorHandler = globalFrontendErrorHandler.createContextHandler('SettingsManager');
     }
 
     async loadSettingsData() {
         try {
             const currentUserDisplay = this.app.domManager.get('currentUserDisplay');
+            const myAccountUserDisplay = this.app.domManager.get('myAccountUserDisplay');
+            
             if (currentUserDisplay && this.app.currentUser) {
                 currentUserDisplay.textContent = `${this.app.currentUser.rank} ${this.app.currentUser.full_name}`;
             }
             
+            if (myAccountUserDisplay && this.app.currentUser) {
+                myAccountUserDisplay.textContent = `${this.app.currentUser.rank} ${this.app.currentUser.full_name}`;
+            }
+            
+            // Handle My Account section visibility
+            this.initializeMyAccountSection();
+            
             await this.loadAccountsList();
+            
+            // Initialize audit logs if user has permission
+            if (this.app.auditLogsManager) {
+                await this.app.auditLogsManager.initializeAuditLogs();
+            }
             
             // Reapply permission-based visibility after settings load
             if (this.app.permissionsManager) {
@@ -38,9 +55,23 @@ class SettingsManager {
                 throw new Error('Failed to fetch users');
             }
             
-            const users = await response.json();
+            const result = await response.json();
             
-            if (!users || users.length === 0) {
+            // Handle standardized response format
+            if (!result.success) {
+                console.error('Error loading user accounts:', result.error || 'Unknown error');
+                throw new Error(result.error || 'Failed to load user accounts');
+            }
+            
+            const users = result.data; // Extract users from standardized response
+            
+            // Validate that we received valid users data
+            if (!users || !Array.isArray(users)) {
+                console.error('Error loading user accounts: Invalid users data', result);
+                throw new Error('Invalid user data received from server');
+            }
+            
+            if (users.length === 0) {
                 accountsTableBody.innerHTML = '';
                 if (accountsEmptyState) accountsEmptyState.style.display = 'block';
                 return;
@@ -69,7 +100,7 @@ class SettingsManager {
                         <td>${user.full_name}</td>
                         <td>${user.role || (user.username === 'admin' ? 'Admin' : 'User')}</td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                        <td>${Utils.formatDate(user.created_at)}</td>
                         <td>
                             <div class="action-buttons">
                                 ${isAdminUser ? `
@@ -136,6 +167,32 @@ class SettingsManager {
         }
     }
     
+    /**
+     * Initialize My Account section (called when settings are loaded)
+     */
+    initializeMyAccountSection() {
+        try {
+            const myAccountSection = document.getElementById('myAccountSection');
+            
+            if (!myAccountSection) {
+                return;
+            }
+            
+            // Check if user has permission to change their own credentials
+            const canChangeOwnCredentials = this.app.permissionsManager?.canChangeOwnCredentials() || false;
+            
+            if (canChangeOwnCredentials) {
+                // Show My Account section
+                myAccountSection.style.display = 'block';
+            } else {
+                // Hide My Account section if user doesn't have permission
+                myAccountSection.style.display = 'none';
+            }
+
+        } catch (error) {
+            console.error('Error initializing My Account section:', error);
+        }
+    }
 
     async reloadAccountsList() {
         await this.loadAccountsList();

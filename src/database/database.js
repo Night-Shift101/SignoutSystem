@@ -7,6 +7,7 @@ const SignoutManager = require('./modules/signout-manager');
 const PreferencesManager = require('./modules/preferences-manager');
 const UtilitiesManager = require('./modules/utilities-manager');
 const PermissionsManager = require('./modules/permissions-manager');
+const AuditManager = require('./modules/audit-manager');
 
 class Database {
     constructor() {
@@ -18,6 +19,7 @@ class Database {
         this.preferencesManager = null;
         this.utilitiesManager = null;
         this.permissionsManager = null;
+        this.auditManager = null;
         
         this.init();
     }
@@ -43,6 +45,7 @@ class Database {
 
     initializeManagers() {
         this.permissionsManager = new PermissionsManager(this.db);
+        this.auditManager = new AuditManager(this.db);
         this.userManager = new UserManager(this.db, this.permissionsManager);
         this.signoutManager = new SignoutManager(this.db);
         this.preferencesManager = new PreferencesManager(this.db);
@@ -104,6 +107,25 @@ class Database {
             )
         `;
 
+        const createAuditLogsTable = `
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                action_type TEXT NOT NULL,
+                table_name TEXT NOT NULL,
+                record_id INTEGER,
+                user_id INTEGER NOT NULL,
+                user_name TEXT NOT NULL,
+                old_values TEXT,
+                new_values TEXT,
+                description TEXT,
+                ip_address TEXT,
+                user_agent TEXT,
+                session_id TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        `;
+
         this.db.run(createUsersTable, (err) => {
             if (err) {
                 console.error('Error creating users table:', err.message);
@@ -127,6 +149,14 @@ class Database {
                 console.error('Error creating user preferences table:', err.message);
             } else {
                 console.log('User preferences table ready');
+            }
+        });
+
+        this.db.run(createAuditLogsTable, (err) => {
+            if (err) {
+                console.error('Error creating audit logs table:', err.message);
+            } else {
+                console.log('Audit logs table ready');
             }
         });
     }

@@ -1,4 +1,5 @@
-import { globalFrontendErrorHandler, ErrorCategory, ErrorSeverity } from './frontend-error-handler.js';
+import { globalFrontendErrorHandler, ErrorCategory } from './frontend-error-handler.js';
+import { TIMEZONE_CONFIG, getCurrentUTC, formatForDisplay, getTodayInDisplayTimezone } from '../config/timezone-config.js';
 
 class Utils {
     static calculateDuration(startTime, endTime = null) {
@@ -16,28 +17,63 @@ class Utils {
         }
     }
 
+    /**
+     * Format time with explicit timezone handling using centralized config
+     * @param {string} dateString - ISO date string (UTC)
+     * @returns {string} Formatted time string in configured timezone
+     */
     static formatTime(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
+        return formatForDisplay(dateString, 'TIME_ONLY');
     }
 
+    /**
+     * Format date and time with explicit timezone handling using centralized config
+     * @param {string} dateString - ISO date string (UTC)
+     * @returns {string} Formatted datetime string in configured timezone
+     */
     static formatDateTime(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleString('en-US', {
-            weekday: 'short',
+        return formatForDisplay(dateString, 'DATETIME_FULL');
+    }
+
+    /**
+     * Format date only with explicit timezone handling using centralized config
+     * @param {string} dateString - ISO date string (UTC)
+     * @returns {string} Formatted date string in configured timezone
+     */
+    static formatDate(dateString) {
+        return formatForDisplay(dateString, 'DATE_ONLY');
+    }
+
+    /**
+     * Get current time in UTC (for storing in database)
+     * @returns {string} ISO string in UTC
+     */
+    static getCurrentUTC() {
+        return getCurrentUTC();
+    }
+
+    /**
+     * Get today's date in display timezone for comparisons
+     * @returns {string} Date string for comparison
+     */
+    static getTodayInDisplayTimezone() {
+        return getTodayInDisplayTimezone();
+    }
+
+    /**
+     * Format a UTC date string to display timezone date for comparison
+     * @param {string} utcDateString - UTC date string
+     * @returns {string} Date string in MM/DD/YYYY format in display timezone
+     */
+    static formatDateForComparison(utcDateString) {
+        if (!utcDateString) return '';
+        
+        const date = new Date(utcDateString);
+        return date.toLocaleDateString(TIMEZONE_CONFIG.LOCALE, {
+            timeZone: TIMEZONE_CONFIG.DISPLAY_TIMEZONE,
             year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true
+            month: '2-digit',
+            day: '2-digit'
         });
     }
 

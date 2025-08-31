@@ -397,7 +397,7 @@
     font-size: 13px;
     transition: all 0.3s ease;
     resize: vertical;
-    min-height: 80px;
+    min-height: 40px;
 }
 
 .modal#signOutModal #barcodeInput:focus {
@@ -464,12 +464,20 @@
     font-size: 0.95rem;
 }
 
+.modal#signOutModal .soldiers-header label #soldierCount {
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-left: 4px;
+}
+
 .modal#signOutModal .soldiers-chips-container {
     background: var(--background-secondary);
     border: 2px dashed var(--border-color);
     border-radius: 8px;
     padding: 16px;
     min-height: 60px;
+    height: fit-content;
     transition: all 0.3s ease;
 }
 
@@ -603,7 +611,7 @@
     gap: 6px;
     align-items: flex-start;
     padding: 12px;
-    max-height: 200px;
+    height: fit-content;
     overflow-y: auto;
 }
 
@@ -733,6 +741,33 @@
 
 .no-cac-link:active {
     transform: scale(0.98);
+}
+
+/* Dev Fill Button Styling */
+.dev-fill-btn {
+    background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-red) 100%);
+    border: none;
+    color: var(--color-white);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin-left: 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dev-fill-btn:hover {
+    background: linear-gradient(135deg, var(--accent-red) 0%, var(--accent-orange) 100%);
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dev-fill-btn:active {
+    transform: scale(0.95);
 }
 
 /* Manual Entry Modal Styling */
@@ -1292,122 +1327,98 @@
     }
 }
 
-/* No CAC Button Styling */
-.no-cac-link {
-    background: none;
-    border: none;
-    color: var(--accent-blue);
-    font-size: 0.9rem;
-    font-weight: 500;
-    text-decoration: underline;
-    cursor: pointer;
-    padding: 2px 4px;
-    margin-left: 8px;
-    transition: all 0.2s ease;
+/* Audit Details Modal */
+#auditDetailsModal .modal-content {
+    max-width: 600px;
+    width: 95%;
 }
 
-.no-cac-link:hover {
-    color: var(--accent-blue-dark);
-    transform: scale(1.02);
+#auditDetailsModal .modal-header h3 {
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
 }
 
-.no-cac-link:active {
-    transform: scale(0.98);
+#auditDetailsModal .audit-details-content {
+    padding: 0;
 }
 
-/* Manual Entry Modal Styling */
-.modal#manualEntryModal .modal-content {
-    max-width: 500px;
-    width: 90%;
+#auditDetailsModal .detail-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-alpha-light);
+    gap: 12px;
 }
 
-.modal#manualEntryModal .form-section {
-    background: linear-gradient(135deg, var(--blue-alpha-light) 0%, var(--green-alpha-light) 100%);
-    border: 1px solid var(--blue-alpha-medium);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 24px;
-    position: relative;
-    overflow: hidden;
+#auditDetailsModal .detail-row:last-child {
+    border-bottom: none;
 }
 
-.modal#manualEntryModal .form-section::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-green) 100%);
+#auditDetailsModal .detail-row strong {
+    min-width: 120px;
+    color: var(--text-primary);
+    font-weight: 600;
 }
 
-.modal#manualEntryModal .form-section h3 {
-    color: var(--primary-color);
-    font-weight: 700;
-    font-size: 1.1rem;
-    margin-bottom: 16px;
+#auditDetailsModal .detail-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 2px solid var(--border-alpha-medium);
+}
+
+#auditDetailsModal .value-comparison {
+    margin-top: 8px;
+}
+
+#auditDetailsModal .change-row {
+    margin-bottom: 12px;
+    padding: 8px;
+    background: var(--background-tertiary);
+    border-radius: 6px;
+}
+
+#auditDetailsModal .value-change {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
 }
 
-.modal#manualEntryModal .form-section h3::before {
-    content: "👤";
-    font-size: 1rem;
+#auditDetailsModal .old-value {
+    padding: 4px 8px;
+    background: var(--red-alpha-light);
+    border-radius: 4px;
+    color: var(--text-danger);
+    font-size: 0.9em;
 }
 
-.modal#manualEntryModal .form-group {
-    margin-bottom: 16px;
+#auditDetailsModal .new-value {
+    padding: 4px 8px;
+    background: var(--green-alpha-light);
+    border-radius: 4px;
+    color: var(--text-success);
+    font-size: 0.9em;
 }
 
-.modal#manualEntryModal .form-group label {
-    display: block;
-    margin-bottom: 6px;
-    color: var(--text-primary);
-    font-weight: 600;
-    font-size: 0.9rem;
+#auditDetailsModal .arrow {
+    color: var(--text-secondary);
+    font-weight: bold;
 }
 
-.modal#manualEntryModal input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 2px solid var(--border-color);
-    border-radius: 6px;
-    background: var(--background-secondary);
-    color: var(--text-primary);
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
+#auditDetailsModal .new-values, 
+#auditDetailsModal .old-values {
+    margin-top: 8px;
 }
 
-.modal#manualEntryModal input:focus {
-    border-color: var(--accent-blue);
-    box-shadow: var(--shadow-focus-blue);
-    background: var(--color-white);
-    outline: none;
+#auditDetailsModal .value-row {
+    padding: 4px 0;
+    display: flex;
+    gap: 8px;
 }
 
-.modal#manualEntryModal input:required {
-    border-left: 3px solid var(--accent-orange);
-}
-
-.modal#manualEntryModal input:required:valid {
-    border-left: 3px solid var(--accent-green);
-}
-
-/* Manual Entry Tag Styling */
-.soldier-chip.manual-entry {
-    border-left: 4px solid var(--accent-orange);
-    background: linear-gradient(135deg, var(--orange-alpha-light) 0%, var(--background-secondary) 100%);
-}
-
-.soldier-chip.manual-entry .manual-tag {
-    background: var(--accent-orange);
-    color: var(--color-white);
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 8px;
-    margin-left: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+#auditDetailsModal .value-row strong {
+    min-width: 100px;
 }

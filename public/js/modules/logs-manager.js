@@ -1,7 +1,10 @@
+import { globalFrontendErrorHandler, ErrorCategory, ErrorSeverity } from './frontend-error-handler.js';
+
 class LogsManager {
     constructor(app) {
         this.app = app;
         this.currentLogs = null;
+        this.errorHandler = globalFrontendErrorHandler.createContextHandler('LogsManager');
     }
 
     async loadFilteredLogs() {
@@ -23,7 +26,21 @@ class LogsManager {
             
             if (!response.ok) throw new Error('Failed to fetch logs');
             
-            let logs = await response.json();
+            const result = await response.json();
+            
+            // Handle standardized response format
+            if (!result.success) {
+                console.error('Error loading logs:', result.error || 'Unknown error');
+                throw new Error(result.error || 'Failed to load logs');
+            }
+            
+            let logs = result.data; // Extract logs from standardized response
+            
+            // Validate that we received valid logs data
+            if (!logs || !Array.isArray(logs)) {
+                console.error('Error loading logs: Invalid logs data', result);
+                throw new Error('Invalid logs data received from server');
+            }
             
             // If soldier name filter is applied, get all soldiers from matching sign-out groups
             if (soldierNameFilter?.value) {
@@ -62,7 +79,22 @@ class LogsManager {
                 return logs;
             }
             
-            const expandedLogs = await response.json();
+            const result = await response.json();
+            
+            // Handle standardized response format
+            if (!result.success) {
+                console.warn('Failed to fetch group members:', result.error || 'Unknown error');
+                return logs;
+            }
+            
+            const expandedLogs = result.data; // Extract logs from standardized response
+            
+            // Validate that we received valid data
+            if (!expandedLogs || !Array.isArray(expandedLogs)) {
+                console.warn('Invalid group members data received, returning original logs');
+                return logs;
+            }
+            
             return expandedLogs;
             
         } catch (error) {
@@ -158,7 +190,7 @@ class LogsManager {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `signout-logs-${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `signout-logs-${Utils.getCurrentUTC().split('T')[0]}.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -181,8 +213,8 @@ class LogsManager {
             const soldierNames = log.soldiers && Array.isArray(log.soldiers) 
                 ? log.soldiers.map(s => `${s.rank} ${s.lastName}`).join('; ')
                 : 'Unknown';
-            const signOutTime = new Date(log.sign_out_time).toLocaleString();
-            const signInTime = log.sign_in_time ? new Date(log.sign_in_time).toLocaleString() : 'N/A';
+            const signOutTime = Utils.formatDateTime(log.sign_out_time);
+            const signInTime = log.sign_in_time ? Utils.formatDateTime(log.sign_in_time) : 'N/A';
             const duration = log.sign_in_time 
                 ? Utils.calculateDuration(log.sign_out_time, log.sign_in_time)
                 : Utils.calculateDuration(log.sign_out_time);
@@ -207,7 +239,7 @@ class LogsManager {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `signout-logs-${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `signout-logs-${Utils.getCurrentUTC().split('T')[0]}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -267,7 +299,7 @@ class LogsManager {
         doc.text('Sign-Out Logs Report', 20, 20);
         
         doc.setFontSize(12);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 30);
+        doc.text(`Generated: ${Utils.formatDateTime(Utils.getCurrentUTC())}`, 20, 30);
         
         doc.text(`Total Records: ${logs.length}`, 20, 40);
         
@@ -305,13 +337,13 @@ class LogsManager {
             doc.text(String(log.signout_id), 20, y);
             doc.text(soldierNames.substring(0, 25), 35, y);
             doc.text(log.location.substring(0, 20), 80, y);
-            doc.text(new Date(log.sign_out_time).toLocaleDateString(), 120, y);
+            doc.text(Utils.formatDate(log.sign_out_time), 120, y);
             doc.text(log.status, 160, y);
             
             y += 8;
         });
         
-        doc.save(`signout-logs-${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.save(`signout-logs-${Utils.getCurrentUTC().split('T')[0]}.pdf`);
         this.app.notificationManager.showNotification('PDF exported successfully', 'success');
     }
 }
