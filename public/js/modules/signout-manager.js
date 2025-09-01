@@ -4,6 +4,7 @@ class SignOutManager {
         this.signouts = [];
         this.filteredSignouts = [];
         this.durationInterval = null;
+        this.largeGroupApproved = false;
     }
 
     async loadCurrentSignOuts() {
@@ -117,11 +118,30 @@ class SignOutManager {
                 statusClass = 'status-warning';
             }
             
+            // Create location options badges
+            let locationOptions = [];
+            try {
+                locationOptions = signout.location_options ? JSON.parse(signout.location_options) : [];
+            } catch (e) {
+                console.warn('Invalid location_options JSON:', signout.location_options);
+                locationOptions = [];
+            }
+            const locationBadges = locationOptions.map(option => {
+                const shortCodes = {
+                    'Off Post': 'OP',
+                    'VI+ Escort': 'VI+',
+                    'Pass': 'P',
+                    'Leave': 'L'
+                };
+                return `<span class="location-badge">${shortCodes[option] || option}</span>`;
+            }).join('');
+
             return `
                 <tr class="signout-row ${statusClass}">
                     <td>
                         <div class="signout-id">
                             <span class="id-badge">${signout.signout_id}</span>
+                            ${locationBadges ? `<div class="location-badges">${locationBadges}</div>` : ''}
                         </div>
                     </td>
                     <td>
@@ -179,9 +199,17 @@ class SignOutManager {
                 return cleanSoldier;
             });
             
+            // Collect checked location options
+            const locationOptions = [];
+            const checkboxes = signOutForm.querySelectorAll('input[name="locationOptions"]:checked');
+            checkboxes.forEach(checkbox => {
+                locationOptions.push(checkbox.value);
+            });
+            
             const signOutData = {
                 soldiers: soldiers, 
                 location: formData.get('location'),
+                locationOptions: locationOptions,
                 notes: formData.get('notes') || '',
                 pin: formData.get('pin') 
             };
@@ -201,8 +229,74 @@ class SignOutManager {
                 return;
             }
             
+            // Check for large groups (more than 10 soldiers)
+            if (signOutData.soldiers.length > 10 && !this.largeGroupApproved) {
+                // Verify PIN first before showing large group alert
+                await this.verifyPinForLargeGroup(signOutData.pin, signOutData.soldiers.length);
+                return;
+            }
+            
+            // Continue with regular sign-out process
+            await this.processSignOut(signOutData);
+            
+        } catch (error) {
+            console.error('Error in handleSignOut:', error);
+            this.app.notificationManager.showNotification('Failed to create sign-out', 'error');
+            Utils.showLoading(false);
+        }
+    }
+
+    async verifyPinForLargeGroup(pin, soldierCount) {
+        try {
             Utils.showLoading(true);
             
+            const response = await Utils.fetchWithAuth('/api/auth/verify-pin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin: pin })
+            });
+            
+            Utils.showLoading(false);
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                this.app.notificationManager.showNotification(
+                    errorData.error || 'Invalid PIN. Please check your PIN and try again.', 
+                    'error'
+                );
+                return;
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // PIN is valid, now show the large group alert
+                this.showLargeGroupAlert(soldierCount);
+            } else {
+                this.app.notificationManager.showNotification('Invalid PIN. Please check your PIN and try again.', 'error');
+            }
+            
+        } catch (error) {
+            Utils.showLoading(false);
+            console.error('Error verifying PIN for large group:', error);
+            this.app.notificationManager.showNotification('Failed to verify PIN. Please try again.', 'error');
+        }
+    }
+
+    async processSignOut(signOutData) {
+        if (!signOutData.location) {
+            this.app.notificationManager.showNotification('Please enter a location', 'warning');
+            return;
+        }
+        
+        if (!signOutData.pin) {
+            this.app.notificationManager.showNotification('Please enter your PIN', 'warning');
+            return;
+        }
+        
+        Utils.showLoading(true);
+        
+        try {
             const response = await Utils.fetchWithAuth('/api/signouts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -215,14 +309,24 @@ class SignOutManager {
             
             const result = await response.json();
             
+            this.app.notificationManager.showNotification(
+                `Successfully signed out ${signOutData.soldiers.length} soldier(s)`, 
+                'success'
+            );
+            
             this.app.modalManager.closeNewSignOutModal();
-            this.app.barcodeManager.clearSoldiers(); 
-            this.loadCurrentSignOuts();
-            this.app.notificationManager.showNotification('Sign-out created successfully', 'success');
+            await this.loadCurrentSignOuts();
+            
+            // Reset the approval flag
+            this.largeGroupApproved = false;
             
         } catch (error) {
             console.error('Error creating sign-out:', error);
-            this.app.notificationManager.showNotification('Failed to create sign-out', 'error');
+            this.app.notificationManager.showNotification(
+                error.message || 'Failed to create sign-out', 
+                'error'
+            );
+            throw error; // Re-throw to let handleSignOut catch it
         } finally {
             Utils.showLoading(false);
         }
@@ -254,6 +358,78 @@ class SignOutManager {
             clearInterval(this.durationInterval);
             this.durationInterval = null;
             console.log('Duration updates stopped');
+        }
+    }
+
+    showLargeGroupAlert(soldierCount) {
+        const modal = this.app.domManager.get('largeGroupAlertModal');
+        const countElement = this.app.domManager.get('alertSoldierCount');
+        
+        if (countElement) {
+            countElement.textContent = soldierCount;
+        }
+        
+        if (modal) {
+            modal.classList.add('show');
+            modal.style.display = 'flex';
+        }
+    }
+
+    closeLargeGroupAlert() {
+        const modal = this.app.domManager.get('largeGroupAlertModal');
+        if (modal) {
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+        }
+        // Reset the approval flag
+        this.largeGroupApproved = false;
+    }
+
+    approveLargeGroup() {
+        this.largeGroupApproved = true;
+        this.closeLargeGroupAlert();
+        
+        // Continue with the sign-out process directly
+        this.continueSignOut();
+    }
+
+    async continueSignOut() {
+        try {
+            const signOutForm = this.app.domManager.get('signOutForm');
+            const formData = new FormData(signOutForm);
+            const soldiers = this.app.barcodeManager.getSoldiers().map(soldier => {
+                // Remove the isManualEntry flag as it's only for UI display
+                const { isManualEntry, ...cleanSoldier } = soldier;
+                return cleanSoldier;
+            });
+            
+            // Collect checked location options
+            const locationOptions = [];
+            const checkboxes = signOutForm.querySelectorAll('input[name="locationOptions"]:checked');
+            checkboxes.forEach(checkbox => {
+                locationOptions.push(checkbox.value);
+            });
+            
+            const signOutData = {
+                soldiers: soldiers, 
+                location: formData.get('location'),
+                locationOptions: locationOptions,
+                notes: formData.get('notes') || '',
+                pin: formData.get('pin') 
+            };
+
+            if (!signOutData.soldiers || signOutData.soldiers.length === 0) {
+                this.app.notificationManager.showNotification('Please select at least one soldier', 'warning');
+                return;
+            }
+            
+            // Process the sign-out directly (PIN already verified, bypassing large group check since it's already approved)
+            await this.processSignOut(signOutData);
+            
+        } catch (error) {
+            console.error('Error in continueSignOut:', error);
+            this.app.notificationManager.showNotification('Failed to create sign-out', 'error');
+            Utils.showLoading(false);
         }
     }
 }

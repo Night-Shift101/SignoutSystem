@@ -185,7 +185,7 @@ router.post('/', [requireBothAuth, requirePermission('create_signout'), ...valid
         return res.status(400).json(errorResponse);
     }
 
-    const { soldiers, location, estimatedReturn, notes, emergencyContact, vehicleInfo, pin } = req.body;
+    const { soldiers, location, locationOptions, estimatedReturn, notes, emergencyContact, vehicleInfo, pin } = req.body;
 
     // Verify PIN
     req.db.verifyUserPin(req.session.user.id, pin, (err, isValid) => {
@@ -217,6 +217,7 @@ router.post('/', [requireBothAuth, requirePermission('create_signout'), ...valid
                 dodId: soldier.dodId ? soldier.dodId.trim() : null
             })),
             destination: location.trim(),
+            locationOptions: locationOptions ? JSON.stringify(locationOptions) : null,
             estimatedReturn: estimatedReturn ? new Date(estimatedReturn) : null,
             notes: notes?.trim() || '',
             emergencyContact: emergencyContact?.trim() || '',

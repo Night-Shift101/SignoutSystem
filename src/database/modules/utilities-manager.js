@@ -23,12 +23,31 @@ class UtilitiesManager {
             }
             
             const hasOldStructure = columns.some(col => col.name === 'soldier_names');
+            const hasLocationOptions = columns.some(col => col.name === 'location_options');
             
             if (hasOldStructure) {
                 console.log('Migrating signouts table to new structure...');
                 this.performSignOutsMigration();
+            } else if (!hasLocationOptions) {
+                console.log('Adding location_options column to signouts table...');
+                this.addLocationOptionsColumn();
             } else {
                 console.log('SignOuts table already has correct structure');
+            }
+        });
+    }
+
+    addLocationOptionsColumn() {
+        const addColumnQuery = `
+            ALTER TABLE signouts 
+            ADD COLUMN location_options TEXT
+        `;
+        
+        this.db.run(addColumnQuery, (err) => {
+            if (err) {
+                console.error('Error adding location_options column:', err.message);
+            } else {
+                console.log('Successfully added location_options column to signouts table');
             }
         });
     }

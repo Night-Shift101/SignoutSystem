@@ -123,9 +123,32 @@ class LogsManager {
                     ? Utils.calculateDuration(log.sign_out_time, log.sign_in_time)
                     : Utils.calculateDuration(log.sign_out_time);
                 
+                // Create location options badges
+                let locationOptions = [];
+                try {
+                    locationOptions = log.location_options ? JSON.parse(log.location_options) : [];
+                } catch (e) {
+                    console.warn('Invalid location_options JSON:', log.location_options);
+                    locationOptions = [];
+                }
+                const locationBadges = locationOptions.map(option => {
+                    const shortCodes = {
+                        'Off Post': 'OP',
+                        'VI+ Escort': 'VI+',
+                        'Pass': 'P',
+                        'Leave': 'L'
+                    };
+                    return `<span class="location-badge">${shortCodes[option] || option}</span>`;
+                }).join('');
+                
                 return `
                     <tr data-signout-id="${log.signout_id}" class="log-row">
-                        <td><span class="id-badge">${log.signout_id}</span></td>
+                        <td>
+                            <div class="signout-id">
+                                <span class="id-badge">${log.signout_id}</span>
+                                ${locationBadges ? `<div class="location-badges">${locationBadges}</div>` : ''}
+                            </div>
+                        </td>
                         <td>
                             ${Utils.renderSoldierChipsForTable(log.soldiers, log.soldier_count)}
                         </td>

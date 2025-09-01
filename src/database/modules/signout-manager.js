@@ -8,6 +8,7 @@ class SignoutManager {
             SELECT 
                 signout_id,
                 location,
+                location_options,
                 sign_out_time,
                 sign_in_time,
                 signed_out_by_id,
@@ -32,7 +33,7 @@ class SignoutManager {
                     '","dodId":"' || COALESCE(soldier_dod_id, '') || '"}'
                     , ',') || ']' as soldiers
             FROM signouts 
-            GROUP BY signout_id, location, sign_out_time, sign_in_time, signed_out_by_id, signed_out_by_name, signed_in_by_id, signed_in_by_name, status, notes, created_at, updated_at
+            GROUP BY signout_id, location, location_options, sign_out_time, sign_in_time, signed_out_by_id, signed_out_by_name, signed_in_by_id, signed_in_by_name, status, notes, created_at, updated_at
             ORDER BY sign_out_time DESC
         `;
         this.db.all(query, [], (err, rows) => {
@@ -59,6 +60,7 @@ class SignoutManager {
             SELECT 
                 signout_id,
                 location,
+                location_options,
                 sign_out_time,
                 signed_out_by_id,
                 signed_out_by_name,
@@ -81,7 +83,7 @@ class SignoutManager {
                     , ',') || ']' as soldiers
             FROM signouts 
             WHERE status = 'OUT' 
-            GROUP BY signout_id, location, sign_out_time, signed_out_by_id, signed_out_by_name, status, notes, created_at, updated_at
+            GROUP BY signout_id, location, location_options, sign_out_time, signed_out_by_id, signed_out_by_name, status, notes, created_at, updated_at
             ORDER BY sign_out_time ASC
         `;
         this.db.all(query, [], (err, rows) => {
@@ -125,9 +127,9 @@ class SignoutManager {
             const insertQuery = `
                 INSERT INTO signouts (
                     signout_id, soldier_rank, soldier_first_name, soldier_last_name, 
-                    soldier_dod_id, location, sign_out_time, signed_out_by_id, 
+                    soldier_dod_id, location, location_options, sign_out_time, signed_out_by_id, 
                     signed_out_by_name, notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
             
             soldiers.forEach((soldier, index) => {
@@ -138,6 +140,7 @@ class SignoutManager {
                     soldier.lastName || '',
                     soldier.dodId || null,
                     signOutData.destination,
+                    signOutData.locationOptions || null,
                     signOutData.signOutTime.toISOString(),
                     signOutData.signed_out_by_id,
                     signOutData.signed_out_by_name,

@@ -307,9 +307,13 @@
 }
 
 /* Sign Out Modal Specific Styles */
+
 .modal#signOutModal .modal-content {
     max-width: 600px;
     width: 95%;
+    height: 95%;
+    max-height: 100%;
+    transform: translateY(-8%);
 }
 
 .modal#signOutModal .modal-header {
@@ -327,10 +331,7 @@
     gap: 8px;
 }
 
-.modal#signOutModal .modal-header h2::before {
-    content: "👥";
-    font-size: 1rem;
-}
+
 
 .modal#signOutModal .modal-close {
     background: none;
@@ -353,7 +354,6 @@
 
 /* Form Section Styling for Sign Out Modal */
 .modal#signOutModal .form-section {
-    background: linear-gradient(135deg, var(--blue-alpha-light) 0%, var(--green-alpha-light) 100%);
     border: 1px solid var(--blue-alpha-medium);
     border-radius: 12px;
     padding: 20px;
@@ -369,7 +369,6 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-green) 100%);
 }
 
 .modal#signOutModal .form-section h3 {
@@ -382,10 +381,7 @@
     gap: 8px;
 }
 
-.modal#signOutModal .form-section h3::before {
-    content: "🔍";
-    font-size: 1rem;
-}
+
 
 /* Barcode Input Styling */
 .modal#signOutModal #barcodeInput {
@@ -806,10 +802,7 @@
     gap: 8px;
 }
 
-.modal#manualEntryModal .form-section h3::before {
-    content: "👤";
-    font-size: 1rem;
-}
+
 
 .modal#manualEntryModal .form-group {
     margin-bottom: 16px;
@@ -865,6 +858,146 @@
     margin-left: 6px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* Large Group Alert Modal Styles */
+.modal#largeGroupAlertModal .modal-content {
+    max-width: 500px;
+    width: 90%;
+    border: 2px solid var(--accent-red);
+    box-shadow: 0 25px 50px -12px rgba(220, 53, 69, 0.4);
+}
+
+.modal#largeGroupAlertModal .modal-header {
+    background: linear-gradient(135deg, var(--accent-red) 0%, var(--accent-red-dark) 100%);
+    color: var(--color-white);
+    border-bottom: 1px solid var(--accent-red-dark);
+}
+
+.modal#largeGroupAlertModal .modal-header h2 {
+    color: var(--color-white);
+    font-weight: 700;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal#largeGroupAlertModal .modal-close {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--color-white);
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    font-size: 1.5rem;
+    transition: all 0.2s ease;
+}
+
+.modal#largeGroupAlertModal .modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.modal#largeGroupAlertModal .alert-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+    background: linear-gradient(135deg, var(--red-alpha-light) 0%, var(--orange-alpha-light) 100%);
+    border: 1px solid var(--red-alpha-medium);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.modal#largeGroupAlertModal .alert-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+    color: var(--accent-red);
+    animation: alertPulse 2s infinite;
+}
+
+@keyframes alertPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.modal#largeGroupAlertModal .alert-text {
+    flex: 1;
+}
+
+.modal#largeGroupAlertModal .alert-text p {
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.modal#largeGroupAlertModal .alert-text p:last-child {
+    margin-bottom: 0;
+}
+
+.modal#largeGroupAlertModal .alert-text strong {
+    color: var(--accent-red);
+    font-weight: 700;
+}
+
+.modal#largeGroupAlertModal .group-count-display {
+    text-align: center;
+    padding: 16px;
+    background: var(--background-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.modal#largeGroupAlertModal .soldier-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent-red);
+    margin-left: 8px;
+}
+
+.modal#largeGroupAlertModal .form-actions {
+    padding: 0 20px 20px 20px;
+    margin: 0;
+    gap: 16px;
+}
+
+.modal#largeGroupAlertModal .form-actions .btn {
+    flex: 1;
+    padding: 12px 20px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.modal#largeGroupAlertModal .form-actions .btn-secondary {
+    background: var(--background-secondary);
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+}
+
+.modal#largeGroupAlertModal .form-actions .btn-secondary:hover {
+    background: var(--background-tertiary);
+    border-color: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.modal#largeGroupAlertModal .form-actions .btn-primary {
+    background: linear-gradient(135deg, var(--accent-red) 0%, var(--accent-red-dark) 100%);
+    color: var(--color-white);
+    border: 2px solid var(--accent-red);
+}
+
+.modal#largeGroupAlertModal .form-actions .btn-primary:hover {
+    background: linear-gradient(135deg, var(--accent-red-dark) 0%, var(--accent-red) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
 }
 .permissions-list {
     max-height: 500px;

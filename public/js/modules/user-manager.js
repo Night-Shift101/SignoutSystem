@@ -57,7 +57,6 @@ class UserManager {
                 <button class="user-item ${isCurrent ? 'current' : ''} ${isDisabled ? 'disabled' : ''}" data-user-id="${user.id}">
                     <div class="user-item-content">
                         <div class="user-item-name">${user.rank} ${user.full_name}</div>
-                        <div class="user-item-role">${user.role || 'User'}</div>
                     </div>
                     ${isCurrent ? '<span class="user-item-indicator current">●</span>' : ''}
                     ${isDisabled ? '<span class="user-item-indicator disabled">●</span>' : ''}

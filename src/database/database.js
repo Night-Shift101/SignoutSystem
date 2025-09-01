@@ -79,6 +79,7 @@ class Database {
                 soldier_last_name TEXT NOT NULL,
                 soldier_dod_id TEXT,
                 location TEXT NOT NULL,
+                location_options TEXT,
                 sign_out_time DATETIME NOT NULL,
                 sign_in_time DATETIME,
                 signed_out_by_id INTEGER NOT NULL,

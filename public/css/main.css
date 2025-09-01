@@ -865,6 +865,61 @@
 
 .search-section {
     width: 20rem;
+    position: relative;
+    overflow: visible;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
+    position: relative;
+    transition: all 0.3s ease;
+    width: 100%;
+    transform-origin: right center;
+}
+
+.search-container.expanded {
+    width: calc(100% + 80px);
+    margin-left: -80px;
+}
+
+.search-input {
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.search-container.expanded .search-input {
+    padding-left: 90px;
+}
+
+.clear-search-btn {
+    position: absolute;
+    left: 8px;
+    background: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.3s ease;
+    z-index: 10;
+    white-space: nowrap;
+}
+
+.clear-search-btn.visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.clear-search-btn:hover {
+    background: var(--primary-color);
+    transform: translateX(0) scale(1.05);
 }
 
 /* Footer styling */

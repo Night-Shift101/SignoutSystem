@@ -253,6 +253,17 @@ class ModalManager {
             const signOutForm = this.app.domManager.get('signOutForm');
             if (signOutForm) {
                 signOutForm.reset();
+                // Clear all location option checkboxes
+                const checkboxes = signOutForm.querySelectorAll('input[name="locationOptions"]');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+            }
+            
+            // Update PIN label with current user's rank and name
+            const pinLabel = document.getElementById('pinLabel');
+            if (pinLabel && this.app.currentUser) {
+                pinLabel.textContent = `${this.app.currentUser.rank} ${this.app.currentUser.full_name}'s PIN *`;
             }
             
             this.app.barcodeManager.clearSoldiers();
@@ -273,9 +284,19 @@ class ModalManager {
         const signOutForm = this.app.domManager.get('signOutForm');
         if (signOutForm) {
             signOutForm.reset();
+            // Clear all location option checkboxes
+            const checkboxes = signOutForm.querySelectorAll('input[name="locationOptions"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
         }
         
         this.app.barcodeManager.clearSoldiers();
+        
+        // Reset large group approval flag
+        if (this.app.signOutManager) {
+            this.app.signOutManager.largeGroupApproved = false;
+        }
     }
 
     // Info Modal Management
@@ -304,6 +325,31 @@ class ModalManager {
             
             const soldierChips = Utils.renderSoldierChips(soldiers);
             
+            // Parse location options if they exist
+            let locationOptionsHtml = '';
+            if (signout.location_options) {
+                try {
+                    const locationOptions = JSON.parse(signout.location_options);
+                    if (locationOptions && locationOptions.length > 0) {
+                        const optionsLabels = {
+                            'off-post': 'Off Post',
+                            'vi+ escort': 'VI+ Escort',
+                            'pass': 'Pass',
+                            'leave': 'Leave'
+                        };
+                        const formattedOptions = locationOptions.map(option => optionsLabels[option] || option).join(', ');
+                        locationOptionsHtml = `
+                        <div class="info-box">
+                            <span class="info-label">Location Type</span>
+                            <span class="info-value">${formattedOptions}</span>
+                        </div>
+                        `;
+                    }
+                } catch (e) {
+                    console.error('Error parsing location options:', e);
+                }
+            }
+            
             const content = `
                 <div class="info-section">
                     <h3>Sign-Out Details</h3>
@@ -320,6 +366,7 @@ class ModalManager {
                             <span class="info-label">Location</span>
                             <span class="info-value">${signout.location}</span>
                         </div>
+                        ${locationOptionsHtml}
                         <div class="info-box">
                             <span class="info-label">Sign-Out Time</span>
                             <span class="info-value">${signOutTime}</span>

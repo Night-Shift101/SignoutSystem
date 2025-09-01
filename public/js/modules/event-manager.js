@@ -16,10 +16,16 @@ class EventManager {
 
     attachUserSelectorEvents() {
         const userSelectorBtn = this.app.domManager.get('userSelectorBtn');
+        const userSelectorEyeBtn = this.app.domManager.get('userSelectorEyeBtn');
         
         userSelectorBtn?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.app.viewManager.toggleUserSelector();
+        });
+
+        userSelectorEyeBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.handleUserSelectorEyeClick();
         });
         
         document.addEventListener('click', (e) => {
@@ -138,6 +144,15 @@ class EventManager {
         cancelManualEntry?.addEventListener('click', () => this.app.modalManager.closeManualEntryModal());
         manualEntryForm?.addEventListener('submit', (e) => this.app.modalManager.handleManualEntry(e));
         
+        // Large group alert modal events
+        const closeLargeGroupAlertModal = this.app.domManager.get('closeLargeGroupAlertModal');
+        const goBackFromAlert = this.app.domManager.get('goBackFromAlert');
+        const approveGroupSignOut = this.app.domManager.get('approveGroupSignOut');
+        
+        closeLargeGroupAlertModal?.addEventListener('click', () => this.app.signOutManager.closeLargeGroupAlert());
+        goBackFromAlert?.addEventListener('click', () => this.app.signOutManager.closeLargeGroupAlert());
+        approveGroupSignOut?.addEventListener('click', () => this.app.signOutManager.approveLargeGroup());
+        
         // Global modal events
         window.addEventListener('click', (e) => {
             const signOutModal = this.app.domManager.get('signOutModal');
@@ -147,6 +162,7 @@ class EventManager {
             const changePinModal = this.app.domManager.get('changePinModal');
             const deleteUserModal = this.app.domManager.get('deleteUserModal');
             const managePermissionsModal = this.app.domManager.get('managePermissionsModal');
+            const largeGroupAlertModal = this.app.domManager.get('largeGroupAlertModal');
             
             if (e.target === signOutModal) this.app.modalManager.closeNewSignOutModal();
             if (e.target === pinModal) this.app.modalManager.closePinModal();
@@ -155,21 +171,81 @@ class EventManager {
             if (e.target === changePinModal) this.app.modalManager.closeChangePinModal();
             if (e.target === deleteUserModal) this.app.modalManager.closeDeleteUserModal();
             if (e.target === managePermissionsModal) this.app.modalManager.closeManagePermissionsModal();
+            if (e.target === largeGroupAlertModal) this.app.signOutManager.closeLargeGroupAlert();
+            if (e.target === deleteUserModal) this.app.modalManager.closeDeleteUserModal();
+            if (e.target === managePermissionsModal) this.app.modalManager.closeManagePermissionsModal();
         });
     }
 
     attachFilterEvents() {
         const searchInput = this.app.domManager.get('searchInput');
+        const clearSearchBtn = this.app.domManager.get('clearSearchBtn');
         const applyFiltersBtn = this.app.domManager.get('applyFiltersBtn');
         const clearFiltersBtn = this.app.domManager.get('clearFiltersBtn');
         const exportCsvBtn = this.app.domManager.get('exportCsvBtn');
         const exportLogsPdfBtn = this.app.domManager.get('exportLogsPdfBtn');
         
-        searchInput?.addEventListener('input', () => this.app.signOutManager.filterCurrentSignOuts());
+        searchInput?.addEventListener('input', () => {
+            this.app.signOutManager.filterCurrentSignOuts();
+            this.handleSearchInputChange();
+        });
+        
+        // Initialize search state on page load
+        if (searchInput) {
+            this.handleSearchInputChange();
+        }
+        
+        clearSearchBtn?.addEventListener('click', () => {
+            this.clearSearch();
+        });
+        
         applyFiltersBtn?.addEventListener('click', () => this.app.logsManager.loadFilteredLogs());
         clearFiltersBtn?.addEventListener('click', () => this.app.logsManager.clearFilters());
         exportCsvBtn?.addEventListener('click', () => this.app.logsManager.exportLogs());
         exportLogsPdfBtn?.addEventListener('click', () => this.app.logsManager.exportLogsPDF());
+    }
+
+    handleSearchInputChange() {
+        const searchInput = this.app.domManager.get('searchInput');
+        const clearSearchBtn = this.app.domManager.get('clearSearchBtn');
+        const searchContainer = searchInput?.parentElement;
+        
+        if (!searchInput || !clearSearchBtn || !searchContainer) return;
+        
+        const hasText = searchInput.value.trim().length > 0;
+        
+        if (hasText) {
+            searchContainer.classList.add('expanded');
+            clearSearchBtn.style.display = 'block';
+            setTimeout(() => {
+                clearSearchBtn.classList.add('visible');
+            }, 50);
+        } else {
+            searchContainer.classList.remove('expanded');
+            clearSearchBtn.classList.remove('visible');
+            setTimeout(() => {
+                clearSearchBtn.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    clearSearch() {
+        const searchInput = this.app.domManager.get('searchInput');
+        const clearSearchBtn = this.app.domManager.get('clearSearchBtn');
+        const searchContainer = searchInput?.parentElement;
+        
+        if (!searchInput || !clearSearchBtn || !searchContainer) return;
+        
+        searchInput.value = '';
+        searchContainer.classList.remove('expanded');
+        clearSearchBtn.classList.remove('visible');
+        
+        setTimeout(() => {
+            clearSearchBtn.style.display = 'none';
+        }, 300);
+        
+        // Trigger the filter update
+        this.app.signOutManager.filterCurrentSignOuts();
     }
 
     attachSettingsEvents() {
@@ -323,6 +399,160 @@ class EventManager {
         //         this.app.modalManager.showSignOutDetails(row.dataset.signoutId);
         //     }
         // });
+    }
+
+    handleUserSelectorEyeClick() {
+        const userSelectorDropdown = this.app.domManager.get('userSelectorDropdown');
+        const header = userSelectorDropdown?.querySelector('.user-selector-header');
+        
+        if (!header) return;
+        
+        // Check if we're already in filter mode
+        const isFilterMode = header.classList.contains('filter-mode');
+        
+        if (isFilterMode) {
+            // Switch back to normal mode
+            this.exitUserFilterMode();
+        } else {
+            // Switch to filter mode
+            this.enterUserFilterMode();
+        }
+    }
+
+    enterUserFilterMode() {
+        const userSelectorDropdown = this.app.domManager.get('userSelectorDropdown');
+        const header = userSelectorDropdown?.querySelector('.user-selector-header');
+        
+        if (!header) return;
+        
+        // Store original content
+        const originalContent = header.innerHTML;
+        header.dataset.originalContent = originalContent;
+        
+        // Replace with filter input
+        header.classList.add('filter-mode');
+        header.innerHTML = `
+            <div class="user-filter-container">
+                <input type="text" id="userFilterInput" class="user-filter-input" 
+                       placeholder="Filter users..." autofocus>
+                <button id="exitFilterBtn" class="exit-filter-btn" title="Exit Filter">
+                    <span>✕</span>
+                </button>
+            </div>
+        `;
+        
+        // Add event listeners for the new elements
+        const filterInput = header.querySelector('#userFilterInput');
+        const exitBtn = header.querySelector('#exitFilterBtn');
+        
+        filterInput?.addEventListener('input', (e) => {
+            this.filterUsersList(e.target.value);
+        });
+        
+        filterInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+                this.exitUserFilterMode();
+            }
+        });
+        
+        exitBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.exitUserFilterMode();
+        });
+        
+        // Focus the input
+        setTimeout(() => filterInput?.focus(), 50);
+    }
+
+    exitUserFilterMode() {
+        const userSelectorDropdown = this.app.domManager.get('userSelectorDropdown');
+        const header = userSelectorDropdown?.querySelector('.user-selector-header');
+        
+        if (!header || !header.classList.contains('filter-mode')) return;
+        
+        // Restore original content
+        const originalContent = header.dataset.originalContent;
+        header.innerHTML = originalContent;
+        header.classList.remove('filter-mode');
+        delete header.dataset.originalContent;
+        
+        // Show all users again
+        this.showAllUsers();
+        
+        // Re-attach eye button event listener
+        const eyeBtn = header.querySelector('#userSelectorEyeBtn');
+        eyeBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.handleUserSelectorEyeClick();
+        });
+    }
+
+    filterUsersList(searchTerm) {
+        const usersList = this.app.domManager.get('usersList');
+        const userItems = usersList?.querySelectorAll('.user-item');
+        
+        if (!userItems) return;
+        
+        const term = searchTerm.toLowerCase().trim();
+        
+        userItems.forEach(item => {
+            const nameElement = item.querySelector('.user-item-name');
+            const name = nameElement?.textContent?.toLowerCase() || '';
+            
+            if (term === '' || name.includes(term)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Show/hide "no results" message
+        this.updateFilterResults(term, userItems);
+    }
+
+    updateFilterResults(searchTerm, userItems) {
+        const usersList = this.app.domManager.get('usersList');
+        if (!usersList) return;
+        
+        const visibleItems = Array.from(userItems).filter(item => 
+            item.style.display !== 'none'
+        );
+        
+        // Remove existing no results message
+        const existingMessage = usersList.querySelector('.filter-no-results');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+        
+        // Show no results message if needed
+        if (searchTerm && visibleItems.length === 0) {
+            const noResultsDiv = document.createElement('div');
+            noResultsDiv.className = 'filter-no-results';
+            noResultsDiv.innerHTML = `
+                <div class="no-results-content">
+                    <span class="no-results-icon">🔍</span>
+                    <span class="no-results-text">No users found matching "${searchTerm}"</span>
+                </div>
+            `;
+            usersList.appendChild(noResultsDiv);
+        }
+    }
+
+    showAllUsers() {
+        const usersList = this.app.domManager.get('usersList');
+        const userItems = usersList?.querySelectorAll('.user-item');
+        const noResultsMessage = usersList?.querySelector('.filter-no-results');
+        
+        // Show all user items
+        userItems?.forEach(item => {
+            item.style.display = 'flex';
+        });
+        
+        // Remove no results message
+        if (noResultsMessage) {
+            noResultsMessage.remove();
+        }
     }
 }
 

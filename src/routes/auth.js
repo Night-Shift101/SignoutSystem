@@ -134,4 +134,49 @@ router.get('/status', (req, res) => {
     res.json(successResponse);
 });
 
+// Verify PIN endpoint
+router.post('/verify-pin', [
+    body('pin').isLength({ min: 4 }).withMessage('PIN must be at least 4 digits')
+], (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        const errorResponse = req.errorHandler.validationError(errors.array());
+        return res.status(400).json(errorResponse);
+    }
+
+    // Check if user is authenticated
+    if (!req.session.user || !req.session.user.id) {
+        const errorResponse = req.errorHandler.failure('User not authenticated', {
+            category: ErrorCategory.AUTHENTICATION,
+            severity: ErrorSeverity.HIGH
+        });
+        return res.status(401).json(errorResponse);
+    }
+
+    const { pin } = req.body;
+    
+    req.db.verifyUserPin(req.session.user.id, pin, (err, isValid) => {
+        if (err) {
+            console.error('PIN verification error:', err);
+            const errorResponse = req.errorHandler.failure('PIN verification failed', {
+                category: ErrorCategory.AUTHENTICATION,
+                severity: ErrorSeverity.HIGH,
+                originalError: err
+            });
+            return res.status(500).json(errorResponse);
+        }
+        
+        if (!isValid) {
+            const errorResponse = req.errorHandler.failure('Invalid PIN', {
+                category: ErrorCategory.AUTHENTICATION,
+                severity: ErrorSeverity.MEDIUM
+            });
+            return res.status(401).json(errorResponse);
+        }
+        
+        const successResponse = req.errorHandler.success({ valid: true }, 'PIN verified successfully');
+        res.json(successResponse);
+    });
+});
+
 module.exports = router;

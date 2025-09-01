@@ -38,15 +38,29 @@ class ViewManager {
             sectionHeader.innerHTML = `
                 <h2>Currently Signed Out</h2>
                 <div class="search-section">
-                    <input type="text" id="searchInput" placeholder="Search by names or location..." class="search-input">
+                    <div class="search-container">
+                        <input type="text" id="searchInput" placeholder="Search by names or location..." class="search-input">
+                        <button id="clearSearchBtn" class="clear-search-btn" style="display: none;">Clear</button>
+                    </div>
                 </div>
             `;
             // Re-attach search input event listener and update DOM manager reference
             const newSearchInput = sectionHeader.querySelector('#searchInput');
+            const newClearSearchBtn = sectionHeader.querySelector('#clearSearchBtn');
             if (newSearchInput) {
-                newSearchInput.addEventListener('input', () => this.app.signOutManager.filterCurrentSignOuts());
+                newSearchInput.addEventListener('input', () => {
+                    this.app.signOutManager.filterCurrentSignOuts();
+                    this.app.eventManager.handleSearchInputChange();
+                });
                 // Update DOM manager reference
                 this.app.domManager.refreshElement('searchInput');
+            }
+            if (newClearSearchBtn) {
+                newClearSearchBtn.addEventListener('click', () => {
+                    this.app.eventManager.clearSearch();
+                });
+                // Update DOM manager reference
+                this.app.domManager.refreshElement('clearSearchBtn');
             }
         }
         

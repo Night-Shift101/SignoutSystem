@@ -175,3 +175,109 @@
 .password-input-wrapper .password-toggle:hover {
     color: var(--text-primary);
 }
+
+/* PIN Authorization Group Styles */
+.pin-auth-group {
+    border: 2px dashed #dc3545;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 20px 0;
+    background: rgba(220, 53, 69, 0.05);
+}
+
+.pin-auth-group label {
+    color: #dc3545;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.pin-auth-group input {
+    border-color: #dc3545;
+}
+
+.pin-auth-group input:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+/* Dark mode adjustments for PIN auth group */
+.dark-mode .pin-auth-group {
+    background: rgba(220, 53, 69, 0.1);
+    border-color: #f5c6cb;
+}
+
+.dark-mode .pin-auth-group label {
+    color: #f5c6cb;
+}
+
+.dark-mode .pin-auth-group input {
+    border-color: #f5c6cb;
+    background: var(--background-secondary);
+    color: var(--text-primary);
+}
+
+.dark-mode .pin-auth-group input:focus {
+    border-color: #f5c6cb;
+    box-shadow: 0 0 0 3px rgba(245, 198, 203, 0.1);
+}
+
+/* Location Checkboxes Styles */
+.location-checkboxes {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 12px;
+    padding: 0 4px;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    justify-content: center;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.checkbox-group label {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+/* Responsive layout */
+@media (max-width: 768px) {
+    .location-checkboxes {
+        gap: 8px;
+        padding: 0 2px;
+    }
+    
+    .checkbox-group label {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .location-checkboxes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        justify-items: center;
+        padding: 8px 0;
+    }
+    
+    .checkbox-group {
+        justify-content: flex-start;
+    }
+}

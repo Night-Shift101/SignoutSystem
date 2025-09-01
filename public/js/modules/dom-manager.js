@@ -9,6 +9,7 @@ class DOMManager {
             // User selector elements
             userSelectorBtn: document.getElementById('userSelectorBtn'),
             userSelectorDropdown: document.getElementById('userSelectorDropdown'),
+            userSelectorEyeBtn: document.getElementById('userSelectorEyeBtn'),
             currentUserName: document.getElementById('currentUserName'),
             usersList: document.getElementById('usersList'),
             
@@ -62,6 +63,13 @@ class DOMManager {
             manualLastName: document.getElementById('manualLastName'),
             manualDodId: document.getElementById('manualDodId'),
             
+            // Large group alert modal elements
+            largeGroupAlertModal: document.getElementById('largeGroupAlertModal'),
+            closeLargeGroupAlertModal: document.getElementById('closeLargeGroupAlertModal'),
+            alertSoldierCount: document.getElementById('alertSoldierCount'),
+            goBackFromAlert: document.getElementById('goBackFromAlert'),
+            approveGroupSignOut: document.getElementById('approveGroupSignOut'),
+            
             // Info modal elements
             infoModal: document.getElementById('infoModal'),
             closeInfoModalBtn: document.getElementById('closeInfoModal'),
@@ -69,6 +77,7 @@ class DOMManager {
             
             // Search and filter elements
             searchInput: document.getElementById('searchInput'),
+            clearSearchBtn: document.getElementById('clearSearchBtn'),
             
             // Table elements
             currentSignOutsTableBody: document.getElementById('currentSignOutsTableBody'),

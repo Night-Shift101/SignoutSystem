@@ -33,7 +33,12 @@
                         <span class="user-selector-arrow">▼</span>
                     </button>
                     <div id="userSelectorDropdown" class="user-selector-menu">
-                        <div class="user-selector-header">Switch User</div>
+                        <div class="user-selector-header">
+                            <span class="user-selector-header-text">Switch User</span>
+                            <button id="userSelectorEyeBtn" class="user-selector-eye-btn" title="View Details">
+                                <span class="eye-icon" style="font-size: x-large;">⌕</span>
+                            </button>
+                        </div>
                         <div id="usersList" class="users-list">
                             <div class="users-loading">Loading users...</div>
                         </div>
@@ -83,7 +88,10 @@
                 <div class="section-header">
                     <h2>Currently Signed Out</h2>
                     <div class="search-section">
-                        <input type="text" id="searchInput" placeholder="Search by names or location..." class="search-input">
+                        <div class="search-container">
+                            <input type="text" id="searchInput" placeholder="Search by names or location..." class="search-input">
+                            <button id="clearSearchBtn" class="clear-search-btn" style="display: none;">Clear</button>
+                        </div>
                     </div>
                 </div>
 
@@ -394,7 +402,7 @@
     <div id="signOutModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>New Group Sign-Out</h2>
+                <h2>New Sign-Out</h2>
                 <button class="modal-close" id="closeModal">&times;</button>
             </div>
             <form id="signOutForm" class="form">
@@ -402,12 +410,10 @@
                 <div class="form-section">
                     <h3>Scan CAC Barcodes</h3>
                     <div class="form-group">
-                        <label for="barcodeInput">Scan CAC Barcode 
-                            <button type="button" id="noCacBtn" class="no-cac-link">(No CAC?)</button>
-                            <button type="button" id="devFillBtn" class="dev-fill-btn">[DEV] Fill Random</button>
-                        </label>
                         <textarea id="barcodeInput" rows="1" autofocus 
                                   placeholder="Click here and scan a CAC barcode to add soldier..."></textarea>
+                                  <button type="button" id="noCacBtn" class="no-cac-link">(No CAC?)</button>
+                            <button type="button" id="devFillBtn" class="dev-fill-btn">[DEV] Fill Random</button>
                     </div>
                     
                     
@@ -426,20 +432,38 @@
                 
                 <div class="form-group">
                     <label for="location">Location *</label>
-                    <input type="text" id="location" name="location" required 
-                           placeholder="e.g. Base Exchange, Medical Appointment, Training Area, etc.">
+                    <input type="text" id="location" name="location" required >
+                    
+                    <div class="location-checkboxes">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="offPost" name="locationOptions" value="off-post">
+                            <label for="offPost">Off Post</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="viEscort" name="locationOptions" value="vi+ escort">
+                            <label for="viEscort">VI+ Escort</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="pass" name="locationOptions" value="pass">
+                            <label for="pass">Pass</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="leave" name="locationOptions" value="leave">
+                            <label for="leave">Leave</label>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="notes">Notes</label>
+                    <label for="notes">Notes (Phone #)</label>
                     <textarea id="notes" name="notes" rows="2" 
-                              placeholder="Additional notes, special instructions, or contact information..."></textarea>
+                              ></textarea>
                 </div>
                 
-                <div class="form-group">
-                    <label for="pin">Your PIN *</label>
+                <div class="form-group pin-auth-group">
+                    <label for="pin" id="pinLabel">Your PIN *</label>
                     <input type="password" id="pin" name="pin" required minlength="4"
-                           placeholder="Enter your PIN to authorize this sign-out">
+                           >
                 </div>
                 
                 <div class="form-actions">
@@ -498,6 +522,36 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Large Group Alert Modal -->
+    <div id="largeGroupAlertModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚠️ ALERT</h2>
+                <button class="modal-close" id="closeLargeGroupAlertModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert-message">
+                    <div class="alert-icon">⚠️</div>
+                    <div class="alert-text">
+                        <p><strong>This group contains more than 10 soldiers.</strong></p>
+                        <p>Large group sign-outs require additional verification. Please confirm you want to proceed with this group sign-out.</p>
+                    </div>
+                </div>
+                <div class="group-count-display">
+                    <span>Total soldiers in group: <span id="alertSoldierCount" class="soldier-count">0</span></span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" id="goBackFromAlert" class="btn btn-secondary">
+                    <span class="icon">←</span> Go Back
+                </button>
+                <button type="button" id="approveGroupSignOut" class="btn btn-primary">
+                    <span class="icon">✓</span> Approve & Continue
+                </button>
+            </div>
         </div>
     </div>
 
