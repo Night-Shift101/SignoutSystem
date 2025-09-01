@@ -16,6 +16,7 @@ import KeyboardManager from './modules/keyboard-manager.js';
 import ConnectionManager from './modules/connection-manager.js';
 import PermissionsManager from './modules/permissions-manager.js';
 import ConfigManager from './modules/config-manager.js';
+import PDFGenerator from './modules/pdf-generator.js';
 import Utils from './modules/utils.js';
 import { globalFrontendErrorHandler } from './modules/frontend-error-handler.js';
 
@@ -87,6 +88,7 @@ class SoldierSignOutApp {
         this.themeManager = new ThemeManager(this);
         this.keyboardManager = new KeyboardManager(this);
         this.connectionManager = new ConnectionManager(this);
+        this.pdfGenerator = new PDFGenerator(this);
         window.barcodeManager = this.barcodeManager;
         window.BarcodeParser = BarcodeParser;
         window.Utils = Utils;

@@ -99,6 +99,7 @@ class DOMManager {
             applyFiltersBtn: document.getElementById('applyFiltersBtn'),
             clearFiltersBtn: document.getElementById('clearFiltersBtn'),
             exportCsvBtn: document.getElementById('exportCsvBtn'),
+            exportPdfBtn: document.getElementById('exportPdfBtn'),
             
             // Sign out details modal
             // signOutDetailsModal: document.getElementById('signOutDetailsModal'),

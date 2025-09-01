@@ -70,6 +70,23 @@
     color: var(--text-primary);
 }
 
+.filter-actions .export-btn:first-of-type {
+    margin-right: 8px;
+}
+
+.filter-actions .export-btn[id="exportPdfBtn"] {
+    background: var(--danger-color);
+    color: white;
+    border-color: var(--danger-color);
+}
+
+.filter-actions .export-btn[id="exportPdfBtn"]:hover:not(:disabled) {
+    background: var(--danger-light);
+    border-color: var(--danger-light);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
 
 
 @media (max-width: 1200px) {

@@ -272,11 +272,33 @@ class LogsManager {
     }
 
     async exportLogsPDF() {
+        console.log('exportLogsPDF called');
+        
         // Check permissions
         if (!this.app.permissionsManager?.hasPermission('export_data')) {
             this.app.permissionsManager?.showPermissionDenied('export data');
             return;
         }
+        
+        console.log('Permissions check passed');
+        
+        // Check if jsPDF is loaded
+        if (!window.jspdf?.jsPDF) {
+            console.error('jsPDF library not loaded');
+            this.app.notificationManager.showNotification('PDF library not loaded', 'error');
+            return;
+        }
+        
+        console.log('jsPDF library available');
+        
+        // Check if PDF generator is available
+        if (!this.app.pdfGenerator) {
+            console.error('PDF generator not available');
+            this.app.notificationManager.showNotification('PDF generator not initialized', 'error');
+            return;
+        }
+        
+        console.log('PDF generator available');
         
         try {
             Utils.showLoading(true);
@@ -316,58 +338,67 @@ class LogsManager {
     }
 
     generateLogsPDF(logs) {
-        const doc = new window.jsPDF();
-        
-        doc.setFontSize(20);
-        doc.text('Sign-Out Logs Report', 20, 20);
-        
-        doc.setFontSize(12);
-        doc.text(`Generated: ${Utils.formatDateTime(Utils.getCurrentUTC())}`, 20, 30);
-        
-        doc.text(`Total Records: ${logs.length}`, 20, 40);
-        
-        let y = 55;
-        
-        doc.setFontSize(10);
-        doc.text('ID', 20, y);
-        doc.text('Soldiers', 35, y);
-        doc.text('Location', 80, y);
-        doc.text('Out Time', 120, y);
-        doc.text('Status', 160, y);
-        
-        y += 10;
-        
-        doc.line(20, y - 5, 190, y - 5);
-        
-        logs.forEach((log, index) => {
-            if (y > 270) {
-                doc.addPage();
-                y = 20;
-                
-                doc.text('ID', 20, y);
-                doc.text('Soldiers', 35, y);
-                doc.text('Location', 80, y);
-                doc.text('Out Time', 120, y);
-                doc.text('Status', 160, y);
-                y += 10;
-                doc.line(20, y - 5, 190, y - 5);
-            }
+        try {
+            // Transform logs data to match PDFGenerator expected format
+            const transformedData = {
+                signOuts: logs.map(log => ({
+                    id: log.signout_id,
+                    soldiers: log.soldiers && Array.isArray(log.soldiers) 
+                        ? log.soldiers.map(s => ({
+                            rank: s.rank,
+                            lastName: s.last_name,
+                            firstName: s.first_name || ''
+                        }))
+                        : [{
+                            rank: log.soldier_rank || '',
+                            lastName: log.soldier_last_name || 'Unknown',
+                            firstName: log.soldier_first_name || ''
+                        }],
+                    location: log.location || 'Unknown',
+                    signOutTime: log.sign_out_time,
+                    expectedReturnTime: log.expected_return_time,
+                    returnTime: log.return_time,
+                    status: log.status || 'Unknown'
+                })),
+                summary: {
+                    totalSignOuts: logs.length,
+                    activeSignOuts: logs.filter(log => log.status === 'Out').length,
+                    returnedSignOuts: logs.filter(log => log.status === 'Returned').length
+                }
+            };
+
+            // Get applied filters for report context
+            const filters = this.getAppliedFilters();
             
-            const soldierNames = log.soldiers && Array.isArray(log.soldiers) 
-                ? log.soldiers.map(s => `${s.rank} ${s.last_name}`).join(', ')
-                : `${log.soldier_rank} ${log.soldier_last_name}` || 'Unknown';
+            // Generate PDF using the enhanced PDFGenerator
+            this.app.pdfGenerator.generateSignOutPDF(transformedData, {
+                title: 'Sign-Out Logs Report',
+                filters: filters,
+                includeStats: true
+            });
             
-            doc.text(String(log.signout_id), 20, y);
-            doc.text(soldierNames.substring(0, 25), 35, y);
-            doc.text(log.location.substring(0, 20), 80, y);
-            doc.text(Utils.formatDate(log.sign_out_time), 120, y);
-            doc.text(log.status, 160, y);
-            
-            y += 8;
-        });
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            this.app.notificationManager.showNotification('Failed to generate PDF report', 'error');
+        }
+    }
+
+    getAppliedFilters() {
+        const filters = {};
         
-        doc.save(`signout-logs-${Utils.getCurrentUTC().split('T')[0]}.pdf`);
-        this.app.notificationManager.showNotification('PDF exported successfully', 'success');
+        const startDate = this.app.domManager.get('startDate');
+        const endDate = this.app.domManager.get('endDate');
+        const soldierNameFilter = this.app.domManager.get('soldierNameFilter');
+        const locationFilter = this.app.domManager.get('locationFilter');
+        const statusFilter = this.app.domManager.get('statusFilter');
+        
+        if (startDate?.value) filters.startDate = startDate.value;
+        if (endDate?.value) filters.endDate = endDate.value;
+        if (soldierNameFilter?.value) filters.soldierName = soldierNameFilter.value;
+        if (locationFilter?.value) filters.location = locationFilter.value;
+        if (statusFilter?.value) filters.status = statusFilter.value;
+        
+        return filters;
     }
 }
 

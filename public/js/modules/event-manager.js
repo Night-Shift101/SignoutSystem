@@ -183,7 +183,10 @@ class EventManager {
         const applyFiltersBtn = this.app.domManager.get('applyFiltersBtn');
         const clearFiltersBtn = this.app.domManager.get('clearFiltersBtn');
         const exportCsvBtn = this.app.domManager.get('exportCsvBtn');
-        const exportLogsPdfBtn = this.app.domManager.get('exportLogsPdfBtn');
+        const exportLogsPdfBtn = this.app.domManager.get('exportPdfBtn');
+        
+        console.log('PDF Export Button found:', !!exportLogsPdfBtn);
+        console.log('PDF Export Button element:', exportLogsPdfBtn);
         
         searchInput?.addEventListener('input', () => {
             this.app.signOutManager.filterCurrentSignOuts();
@@ -202,7 +205,12 @@ class EventManager {
         applyFiltersBtn?.addEventListener('click', () => this.app.logsManager.loadFilteredLogs());
         clearFiltersBtn?.addEventListener('click', () => this.app.logsManager.clearFilters());
         exportCsvBtn?.addEventListener('click', () => this.app.logsManager.exportLogs());
-        exportLogsPdfBtn?.addEventListener('click', () => this.app.logsManager.exportLogsPDF());
+        exportLogsPdfBtn?.addEventListener('click', () => {
+            console.log('PDF export button clicked!');
+            console.log('PDFGenerator available:', !!this.app.pdfGenerator);
+            console.log('LogsManager available:', !!this.app.logsManager);
+            this.app.logsManager.exportLogsPDF();
+        });
     }
 
     handleSearchInputChange() {
