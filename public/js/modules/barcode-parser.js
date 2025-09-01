@@ -74,30 +74,32 @@ class BarcodeParser {
 
             
             
-            const nameMatch = line1.match(/([A-Z][a-z]+)\s+([A-Z])([A-Z][a-z]+)\s+([A-Z])/);
-            
-            let firstName, middleInitial, lastName;
-            
-            if (nameMatch) {
-                firstName = nameMatch[1];
-                middleInitial = nameMatch[2];
-                lastName = nameMatch[3];
-            } else {
-                
-                const words = line1.split(/\s+/).filter(word => word.length > 0);
-                const nameWords = words.filter(word => /^[A-Z][a-z]+$/.test(word));
-                
-                if (nameWords.length >= 2) {
-                    firstName = nameWords[0];
-                    lastName = nameWords[1];
-                    
-                    
-                    const singleLetters = line1.match(/\s([A-Z])\s/g);
-                    if (singleLetters && singleLetters.length > 0) {
-                        middleInitial = singleLetters[0].trim();
-                    }
-                }
-            }
+            const from17 = line1.slice(16);
+
+// Allow any non-digit, non-space characters after the initial capital for first/last
+const nameMatch = from17.match(/([A-Z][^\d\s]+)\s+([A-Z])([A-Z][^\d\s]+)\s/);
+
+let firstName, middleInitial, lastName;
+
+if (nameMatch) {
+  firstName = nameMatch[1];
+  middleInitial = nameMatch[2];
+  lastName = nameMatch[3];
+} else {
+  const words = from17.split(/\s+/).filter(word => word.length > 0);
+  // Match First/Last as: capital letter followed by non-digit, non-space chars
+  const nameWords = words.filter(word => /^[A-Z][^\d\s]+$/.test(word));
+
+  if (nameWords.length >= 2) {
+    firstName = nameWords[0];
+    lastName = nameWords[1];
+
+    const singleLetters = from17.match(/\s([A-Z])\s/g);
+    if (singleLetters && singleLetters.length > 0) {
+      middleInitial = singleLetters[0].trim();
+    }
+  }
+}
 
             
             

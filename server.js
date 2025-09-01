@@ -3,6 +3,8 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const session = require('express-session');
+const https = require('https');
+const fs = require('fs');
 const { globalErrorHandler } = require('./src/utils/error-handler');
 require('dotenv').config();
 
@@ -30,8 +32,10 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: false, 
-        maxAge: 24 * 60 * 60 * 1000 
+        secure: process.env.ENABLE_HTTPS === 'true', // Use secure cookies with HTTPS
+        maxAge: parseInt(process.env.SESSION_MAX_AGE) || 24 * 60 * 60 * 1000,
+        httpOnly: true,
+        sameSite: 'strict'
     }
 }));
 
@@ -119,11 +123,42 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });
 });
 
+// SSL Configuration
+const enableHttps = process.env.ENABLE_HTTPS === 'true';
+const sslCertFile = process.env.SSL_CRT_FILE;
+const sslKeyFile = process.env.SSL_KEY_FILE;
 
-app.listen(PORT, () => {
-    console.log(`Soldier Sign-Out System running on http://localhost:${PORT}`);
-    console.log('Database initialized successfully');
-});
+if (enableHttps && sslCertFile && sslKeyFile) {
+    // Check if SSL files exist
+    if (fs.existsSync(sslCertFile) && fs.existsSync(sslKeyFile)) {
+        const httpsOptions = {
+            cert: fs.readFileSync(sslCertFile),
+            key: fs.readFileSync(sslKeyFile)
+        };
+
+        https.createServer(httpsOptions, app).listen(PORT, () => {
+            console.log(`🔒 Soldier Sign-Out System running on https://localhost:${PORT}`);
+            console.log('✅ SSL/HTTPS enabled');
+            console.log('📊 Database initialized successfully');
+        });
+    } else {
+        console.error('❌ SSL certificate files not found!');
+        console.error(`📁 Expected cert file: ${sslCertFile}`);
+        console.error(`🔑 Expected key file: ${sslKeyFile}`);
+        console.log('💡 Run "npm run generate-certs" to create self-signed certificates');
+        process.exit(1);
+    }
+} else {
+    // HTTP Server
+    app.listen(PORT, () => {
+        console.log(`🌐 Soldier Sign-Out System running on http://localhost:${PORT}`);
+        console.log('⚠️  HTTP mode (not secure)');
+        console.log('📊 Database initialized successfully');
+        if (process.env.NODE_ENV === 'production') {
+            console.log('⚠️  WARNING: Running in production without HTTPS!');
+        }
+    });
+}
 
 
 process.on('SIGINT', () => {
